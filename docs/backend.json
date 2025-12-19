@@ -1,0 +1,118 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the SpendWise application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "email"
+      ]
+    },
+    "Expense": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Expense",
+      "type": "object",
+      "description": "Represents an expense record for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the expense entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Expense)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the expense."
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the expense."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the expense."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the expense.",
+          "format": "date-time"
+        },
+        "timestamp": {
+          "type": "number",
+          "description": "Timestamp of when the expense was recorded."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "title",
+        "amount",
+        "category",
+        "date",
+        "timestamp"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles.  Path-based ownership ensures only the authenticated user (identified by userId) can access their own profile data. This collection is primarily used for storing user-related information like email, etc.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user.  Corresponds to the Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/expenses/{expenseId}",
+        "definition": {
+          "entityName": "Expense",
+          "schema": {
+            "$ref": "#/backend/entities/Expense"
+          },
+          "description": "Stores expense data for each user. Path-based ownership (`/users/{userId}/expenses/{expenseId}`) ensures that only the authenticated user can access expenses under their ID, enabling secure list operations. Authorization Independence is achieved because expense documents are located under the user id in a hierarchy and ownership can be validated in rules without `get()` calls.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user who owns the expense."
+            },
+            {
+              "name": "expenseId",
+              "description": "The unique identifier for the expense document."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and easily maintainable data model for the SpendWise application, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). The structure primarily leverages path-based ownership for user expenses, ensuring that only the authenticated user can access their own data. Authorization Independence is achieved because expense documents do not need to `get()` user documents to check authorization. QAPs are supported by segregating data based on user ownership, which allows for secure list operations using path-based rules. This design avoids complex rule logic and ensures that list operations are inherently secure. The timestamp field is included to enable ordered queries and chronological display of expenses."
+  }
+}
