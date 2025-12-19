@@ -1,57 +1,29 @@
+// src/app/actions.ts
 'use server';
 
-import { doc, collection, Timestamp, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { revalidatePath } from 'next/cache';
-import { firestore } from '@/firebase/server-init';
 import { categorizeExpense } from '@/ai/flows/categorize-expense';
+import { revalidatePath } from 'next/cache';
 
-type ExpenseInput = {
-  userId: string;
-  title: string;
-  amount: number;
-  category?: string;
-  date: Date;
-};
-
-export async function addExpense(expenseData: ExpenseInput) {
-  let category = expenseData.category;
-
-  if (!category) {
-    try {
-      const result = await categorizeExpense({ title: expenseData.title, description: '' });
-      category = result.category;
-    } catch (error) {
-      console.error("AI categorization failed, falling back to 'Other'", error);
-      category = 'Other';
-    }
+/**
+ * Server action to get an AI-inferred category for an expense.
+ * This runs on the server to protect the AI API key.
+ * @param title The title of the expense.
+ * @returns The category name.
+ */
+export async function getAICategory(title: string): Promise<string> {
+  try {
+    const result = await categorizeExpense({ title, description: '' });
+    return result.category;
+  } catch (error) {
+    console.error("AI categorization failed, falling back to 'Other'", error);
+    return 'Other';
   }
-  
-  const collectionRef = collection(firestore, 'users', expenseData.userId, 'expenses');
-
-  await addDoc(collectionRef, {
-    ...expenseData,
-    category,
-    date: Timestamp.fromDate(expenseData.date),
-    timestamp: new Date().getTime(),
-  });
-
-  revalidatePath('/');
 }
 
-export async function updateExpense(expenseId: string, expenseData: ExpenseInput) {
-  const docRef = doc(firestore, 'users', expenseData.userId, 'expenses', expenseId);
-  
-  await updateDoc(docRef, {
-      ...expenseData,
-      date: Timestamp.fromDate(expenseData.date),
-  });
-
-  revalidatePath('/');
-}
-
-export async function deleteExpense(userId: string, expenseId: string) {
-  const docRef = doc(firestore, 'users', userId, 'expenses', expenseId);
-  await deleteDoc(docRef);
-
+/**
+ * Server action to revalidate the cache for the dashboard page.
+ * This is called from the client after a successful data mutation.
+ */
+export async function revalidateDashboard() {
   revalidatePath('/');
 }

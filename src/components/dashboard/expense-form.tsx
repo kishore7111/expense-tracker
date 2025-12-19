@@ -4,6 +4,12 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import {
+  collection,
+  doc,
+  Timestamp,
+} from 'firebase/firestore';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -36,11 +42,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Edit, PlusCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useUser } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import type { Expense } from '@/lib/types';
 import { expenseCategories } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { addExpense, updateExpense, deleteExpense } from '@/app/actions';
+import { getAICategory, revalidateDashboard } from '@/app/actions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,6 +58,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  addDocumentNonBlocking,
+  deleteDocumentNonBlocking,
+  updateDocumentNonBlocking,
+} from '@/firebase/non-blocking-updates';
 
 const formSchema = z.object({
   title: z.string().min(2, { message: 'Title must be at least 2 characters.' }),
@@ -66,6 +77,7 @@ type ExpenseFormProps = {
 
 export default function ExpenseForm({ expense }: ExpenseFormProps) {
   const { user } = useUser();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,7 +92,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
       date: expense?.date ? (expense.date as unknown as { toDate: () => Date }).toDate() : new Date(),
     },
   });
-  
+
   const resetForm = () => {
     form.reset({
       title: expense?.title ?? '',
@@ -88,29 +100,45 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
       category: expense?.category ?? '',
       date: expense?.date ? (expense.date as unknown as { toDate: () => Date }).toDate() : new Date(),
     });
-  }
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user) {
+    if (!user || !firestore) {
       toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
+    let category = values.category;
+    if (!category) {
+      category = await getAICategory(values.title);
+    }
+
     const expenseData = {
       ...values,
       userId: user.uid,
+      category,
+      date: Timestamp.fromDate(values.date),
+      timestamp: new Date().getTime(),
     };
+    
+    // Remove the userId from the object that will be saved to Firestore, as it's not in the type and only used for the path.
+    const { userId, ...dataToSave } = expenseData;
+
 
     try {
       if (expense) {
-        await updateExpense(expense.id, expenseData);
+        const docRef = doc(firestore, 'users', user.uid, 'expenses', expense.id);
+        updateDocumentNonBlocking(docRef, dataToSave);
         toast({ title: 'Success', description: 'Expense updated successfully.' });
       } else {
-        await addExpense(expenseData);
+        const collectionRef = collection(firestore, 'users', user.uid, 'expenses');
+        addDocumentNonBlocking(collectionRef, dataToSave);
         toast({ title: 'Success', description: 'Expense added successfully.' });
       }
+      
+      await revalidateDashboard();
       setIsOpen(false);
       resetForm();
     } catch (error: any) {
@@ -122,18 +150,16 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
   }
 
   const handleDelete = async () => {
-    if (!user || !expense) {
+    if (!user || !expense || !firestore) {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not delete expense.' });
       return;
     }
-    try {
-      await deleteExpense(user.uid, expense.id);
-      toast({ title: 'Success', description: 'Expense deleted.' });
-      setIsDeleteDialogOpen(false);
-      setIsOpen(false);
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to delete expense.' });
-    }
+    const docRef = doc(firestore, 'users', user.uid, 'expenses', expense.id);
+    deleteDocumentNonBlocking(docRef);
+    await revalidateDashboard();
+    toast({ title: 'Success', description: 'Expense deleted.' });
+    setIsDeleteDialogOpen(false);
+    setIsOpen(false);
   };
 
   const onOpenChange = (open: boolean) => {
@@ -141,7 +167,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
       resetForm();
     }
     setIsOpen(open);
-  }
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -197,15 +223,17 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category (or let AI decide)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {expenseCategories.map(cat => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      {expenseCategories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -253,8 +281,8 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
                 <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                   <AlertDialogTrigger asChild>
                     <Button type="button" variant="destructive" className="mr-auto">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
