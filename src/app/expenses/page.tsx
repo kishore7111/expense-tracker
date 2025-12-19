@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import type { Expense } from '@/lib/types';
+import type { Expense, ExpenseCategory } from '@/lib/types';
+import { expenseCategories } from '@/lib/types';
 import Header from '@/components/dashboard/header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,14 +13,26 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { getCategoryIcon } from '@/lib/icons';
 import ExpenseForm from '@/components/dashboard/expense-form';
-import { ReceiptText } from 'lucide-react';
+import { ReceiptText, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
 
 export default function ExpensesPage() {
   const { user, isUserLoading: authLoading } = useUser();
   const router = useRouter();
   const firestore = useFirestore();
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | 'all'>('all');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -33,6 +46,16 @@ export default function ExpensesPage() {
   }, [firestore, user]);
 
   const { data: expenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery);
+  
+  const filteredExpenses = useMemo(() => {
+    if (!expenses) return [];
+    return expenses.filter(expense => {
+      const matchesSearch = expense.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || expense.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [expenses, searchTerm, selectedCategory]);
+
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -82,6 +105,34 @@ export default function ExpensesPage() {
             </div>
           </CardHeader>
           <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search by title..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Select
+                value={selectedCategory}
+                onValueChange={(value) => setSelectedCategory(value as ExpenseCategory | 'all')}
+              >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {expenseCategories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -93,8 +144,8 @@ export default function ExpensesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {expenses && expenses.length > 0 ? (
-                  expenses.map((expense) => (
+                {filteredExpenses && filteredExpenses.length > 0 ? (
+                  filteredExpenses.map((expense) => (
                     <TableRow key={expense.id}>
                       <TableCell className="font-medium">{expense.title}</TableCell>
                       <TableCell>
