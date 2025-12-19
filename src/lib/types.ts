@@ -1,10 +1,12 @@
+import { Timestamp } from 'firebase/firestore';
+
 export type Expense = {
   id: string;
   userId: string;
   title: string;
   amount: number;
   category: string;
-  date: Date;
+  date: Timestamp;
 };
 
 export const expenseCategories = [

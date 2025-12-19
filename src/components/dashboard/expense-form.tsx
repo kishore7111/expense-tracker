@@ -89,7 +89,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
       title: expense?.title ?? '',
       amount: expense?.amount ?? 0,
       category: expense?.category ?? '',
-      date: expense?.date ? (expense.date as unknown as { toDate: () => Date }).toDate() : new Date(),
+      date: expense?.date ? expense.date.toDate() : new Date(),
     },
   });
 
@@ -98,7 +98,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
       title: expense?.title ?? '',
       amount: expense?.amount ?? 0,
       category: expense?.category ?? '',
-      date: expense?.date ? (expense.date as unknown as { toDate: () => Date }).toDate() : new Date(),
+      date: expense?.date ? expense.date.toDate() : new Date(),
     });
   };
 
@@ -111,7 +111,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
     setIsSubmitting(true);
 
     let category = values.category;
-    if (!category) {
+    if (!category || category === '') {
       category = await getAICategory(values.title);
     }
 
@@ -126,12 +126,10 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
     try {
       if (expense) {
         const docRef = doc(firestore, 'users', user.uid, 'expenses', expense.id);
-        const { userId, ...dataToUpdate } = expenseData; // userId is not in the type for update
-        updateDocumentNonBlocking(docRef, dataToUpdate);
+        updateDocumentNonBlocking(docRef, expenseData);
         toast({ title: 'Success', description: 'Expense updated successfully.' });
       } else {
         const collectionRef = collection(firestore, 'users', user.uid, 'expenses');
-        // For creation, we *must* include the userId to pass security rules
         addDocumentNonBlocking(collectionRef, expenseData);
         toast({ title: 'Success', description: 'Expense added successfully.' });
       }

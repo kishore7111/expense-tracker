@@ -39,8 +39,8 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
     try {
-      initiateEmailSignUp(auth, values.email, values.password);
-      router.push('/');
+      await initiateEmailSignUp(auth, values.email, values.password);
+      // The onAuthStateChanged listener in the provider will handle the redirect
     } catch (err: any) {
       if (err.code === AuthErrorCodes.EMAIL_EXISTS) {
         setError('An account with this email address already exists.');

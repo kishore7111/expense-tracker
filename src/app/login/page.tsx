@@ -40,12 +40,10 @@ export default function LoginPage() {
     setError(null);
     try {
       // Non-blocking call
-      initiateEmailSignIn(auth, values.email, values.password);
-      router.push('/');
+      await initiateEmailSignIn(auth, values.email, values.password);
+      // The onAuthStateChanged listener in the provider will handle the redirect
     } catch (err: any) {
-      // This catch block might not be hit for auth errors due to the non-blocking nature
-      // onAuthStateChanged is the primary way to handle success/failure
-      if (err.code === AuthErrorCodes.INVALID_LOGIN_CREDENTIALS) {
+      if (err.code === AuthErrorCodes.INVALID_LOGIN_CREDENTIALS || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
         setError('Invalid email or password. Please try again.');
       } else {
         setError(err.message || 'An unexpected error occurred. Please try again later.');
