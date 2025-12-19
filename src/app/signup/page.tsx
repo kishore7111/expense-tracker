@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, AuthErrorCodes } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,7 +40,11 @@ export default function SignupPage() {
       await createUserWithEmailAndPassword(auth, values.email, values.password);
       router.push('/');
     } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred.');
+      if (err.code === AuthErrorCodes.EMAIL_EXISTS) {
+        setError('An account with this email address already exists.');
+      } else {
+        setError(err.message || 'An unexpected error occurred. Please try again later.');
+      }
       setLoading(false);
     }
   }
