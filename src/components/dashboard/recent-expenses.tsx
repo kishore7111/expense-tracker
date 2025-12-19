@@ -8,6 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { getCategoryIcon } from '@/lib/icons';
 import ExpenseForm from './expense-form';
 import { History } from 'lucide-react';
+import { Button } from '../ui/button';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 
 
 type RecentExpensesProps = {
@@ -28,12 +31,20 @@ export default function RecentExpenses({ expenses }: RecentExpensesProps) {
   
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5 text-muted-foreground" />
-            Recent Transactions
-        </CardTitle>
-        <CardDescription>Your last 5 expenses.</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-muted-foreground" />
+              Recent Transactions
+          </CardTitle>
+          <CardDescription>Your last 5 expenses.</CardDescription>
+        </div>
+        <Link href="/expenses" passHref>
+          <Button variant="outline" size="sm">
+            View All
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </Link>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-64">
