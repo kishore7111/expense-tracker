@@ -114,6 +114,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
       setIsOpen(false);
       resetForm();
     } catch (error) {
+      console.error(error);
       toast({ variant: 'destructive', title: 'Error', description: 'Something went wrong.' });
     } finally {
       setIsSubmitting(false);
