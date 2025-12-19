@@ -113,9 +113,9 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
       }
       setIsOpen(false);
       resetForm();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Something went wrong.' });
+      toast({ variant: 'destructive', title: 'Error', description: error.message || 'Something went wrong.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -131,8 +131,8 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
       toast({ title: 'Success', description: 'Expense deleted.' });
       setIsDeleteDialogOpen(false);
       setIsOpen(false);
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete expense.' });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to delete expense.' });
     }
   };
 

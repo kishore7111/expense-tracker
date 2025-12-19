@@ -1,14 +1,9 @@
 'use server';
 
-import { doc, collection, Timestamp } from 'firebase/firestore';
+import { doc, collection, Timestamp, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
-import { getSdks, initializeFirebase } from '@/firebase';
+import { firestore } from '@/firebase/server-init';
 import { categorizeExpense } from '@/ai/flows/categorize-expense';
-import { 
-  addDocumentNonBlocking,
-  updateDocumentNonBlocking,
-  deleteDocumentNonBlocking
-} from '@/firebase/non-blocking-updates';
 
 type ExpenseInput = {
   userId: string;
@@ -18,13 +13,7 @@ type ExpenseInput = {
   date: Date;
 };
 
-function getDb() {
-  const { firestore } = initializeFirebase();
-  return firestore;
-}
-
 export async function addExpense(expenseData: ExpenseInput) {
-  const db = getDb();
   let category = expenseData.category;
 
   if (!category) {
@@ -37,9 +26,9 @@ export async function addExpense(expenseData: ExpenseInput) {
     }
   }
   
-  const collectionRef = collection(db, 'users', expenseData.userId, 'expenses');
+  const collectionRef = collection(firestore, 'users', expenseData.userId, 'expenses');
 
-  addDocumentNonBlocking(collectionRef, {
+  await addDoc(collectionRef, {
     ...expenseData,
     category,
     date: Timestamp.fromDate(expenseData.date),
@@ -50,10 +39,9 @@ export async function addExpense(expenseData: ExpenseInput) {
 }
 
 export async function updateExpense(expenseId: string, expenseData: ExpenseInput) {
-  const db = getDb();
-  const docRef = doc(db, 'users', expenseData.userId, 'expenses', expenseId);
+  const docRef = doc(firestore, 'users', expenseData.userId, 'expenses', expenseId);
   
-  updateDocumentNonBlocking(docRef, {
+  await updateDoc(docRef, {
       ...expenseData,
       date: Timestamp.fromDate(expenseData.date),
   });
@@ -62,9 +50,8 @@ export async function updateExpense(expenseId: string, expenseData: ExpenseInput
 }
 
 export async function deleteExpense(userId: string, expenseId: string) {
-  const db = getDb();
-  const docRef = doc(db, 'users', userId, 'expenses', expenseId);
-  deleteDocumentNonBlocking(docRef);
+  const docRef = doc(firestore, 'users', userId, 'expenses', expenseId);
+  await deleteDoc(docRef);
 
   revalidatePath('/');
 }
