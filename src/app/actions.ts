@@ -2,15 +2,13 @@
 
 import { doc, collection, Timestamp } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
-import { getSdks } from '@/firebase';
-import { initializeApp, getApp } from 'firebase/app';
+import { getSdks, initializeFirebase } from '@/firebase';
 import { categorizeExpense } from '@/ai/flows/categorize-expense';
 import { 
   addDocumentNonBlocking,
   updateDocumentNonBlocking,
   deleteDocumentNonBlocking
 } from '@/firebase/non-blocking-updates';
-import { firebaseConfig } from '@/firebase/config';
 
 type ExpenseInput = {
   userId: string;
@@ -21,8 +19,7 @@ type ExpenseInput = {
 };
 
 function getDb() {
-  const app = getApp();
-  const { firestore } = getSdks(app);
+  const { firestore } = initializeFirebase();
   return firestore;
 }
 
