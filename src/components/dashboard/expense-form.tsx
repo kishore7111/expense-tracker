@@ -122,19 +122,17 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
       date: Timestamp.fromDate(values.date),
       timestamp: new Date().getTime(),
     };
-    
-    // Remove the userId from the object that will be saved to Firestore, as it's not in the type and only used for the path.
-    const { userId, ...dataToSave } = expenseData;
-
 
     try {
       if (expense) {
         const docRef = doc(firestore, 'users', user.uid, 'expenses', expense.id);
-        updateDocumentNonBlocking(docRef, dataToSave);
+        const { userId, ...dataToUpdate } = expenseData; // userId is not in the type for update
+        updateDocumentNonBlocking(docRef, dataToUpdate);
         toast({ title: 'Success', description: 'Expense updated successfully.' });
       } else {
         const collectionRef = collection(firestore, 'users', user.uid, 'expenses');
-        addDocumentNonBlocking(collectionRef, dataToSave);
+        // For creation, we *must* include the userId to pass security rules
+        addDocumentNonBlocking(collectionRef, expenseData);
         toast({ title: 'Success', description: 'Expense added successfully.' });
       }
       
