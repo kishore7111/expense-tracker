@@ -11,14 +11,17 @@ type StatsCardsProps = {
 
 export default function StatsCards({ expenses }: StatsCardsProps) {
   const { totalExpenses, monthlyExpenses, transactionCount } = useMemo(() => {
+    if (!expenses) return { totalExpenses: 0, monthlyExpenses: 0, transactionCount: 0 };
+    
     const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
 
     const now = new Date();
     const monthly = expenses
-      .filter(
-        (expense) =>
-          expense.date.getMonth() === now.getMonth() &&
-          expense.date.getFullYear() === now.getFullYear()
+      .filter((expense) => {
+          const expenseDate = (expense.date as any).toDate();
+          return expenseDate.getMonth() === now.getMonth() &&
+          expenseDate.getFullYear() === now.getFullYear()
+        }
       )
       .reduce((sum, expense) => sum + expense.amount, 0);
 

@@ -36,7 +36,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Edit, PlusCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useAuth } from '@/hooks/use-auth';
+import { useUser } from '@/firebase';
 import type { Expense } from '@/lib/types';
 import { expenseCategories } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -65,7 +65,7 @@ type ExpenseFormProps = {
 };
 
 export default function ExpenseForm({ expense }: ExpenseFormProps) {
-  const { user } = useAuth();
+  const { user } = useUser();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,7 +77,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
       title: expense?.title ?? '',
       amount: expense?.amount ?? 0,
       category: expense?.category ?? '',
-      date: expense?.date ?? new Date(),
+      date: expense?.date ? (expense.date as unknown as { toDate: () => Date }).toDate() : new Date(),
     },
   });
   
@@ -86,7 +86,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
       title: expense?.title ?? '',
       amount: expense?.amount ?? 0,
       category: expense?.category ?? '',
-      date: expense?.date ?? new Date(),
+      date: expense?.date ? (expense.date as unknown as { toDate: () => Date }).toDate() : new Date(),
     });
   }
 
@@ -126,7 +126,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
       return;
     }
     try {
-      await deleteExpense(expense.id);
+      await deleteExpense(user.uid, expense.id);
       toast({ title: 'Success', description: 'Expense deleted.' });
       setIsDeleteDialogOpen(false);
       setIsOpen(false);

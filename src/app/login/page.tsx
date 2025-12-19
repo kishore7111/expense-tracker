@@ -6,15 +6,15 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { signInWithEmailAndPassword, AuthErrorCodes } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client';
+import { AuthErrorCodes } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Wallet } from 'lucide-react';
 import AuthLayout from '@/components/auth-layout';
+import { useAuth } from '@/firebase';
+import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -23,6 +23,7 @@ const formSchema = z.object({
 
 export default function LoginPage() {
   const router = useRouter();
+  const auth = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -38,9 +39,12 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
+      // Non-blocking call
+      initiateEmailSignIn(auth, values.email, values.password);
       router.push('/');
     } catch (err: any) {
+      // This catch block might not be hit for auth errors due to the non-blocking nature
+      // onAuthStateChanged is the primary way to handle success/failure
       if (err.code === AuthErrorCodes.INVALID_LOGIN_CREDENTIALS) {
         setError('Invalid email or password. Please try again.');
       } else {

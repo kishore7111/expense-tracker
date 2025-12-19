@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, onSnapshot, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
-import type { Expense } from '@/lib/types';
-import { useAuth } from '@/hooks/use-auth';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import { PiggyBank, ReceiptText } from 'lucide-react';
+
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import type { Expense } from '@/lib/types';
 
 import Header from '@/components/dashboard/header';
 import StatsCards from '@/components/dashboard/stats-cards';
@@ -25,50 +25,32 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function DashboardPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isUserLoading: authLoading } = useUser();
   const router = useRouter();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
+  const firestore = useFirestore();
+
   const [summary, setSummary] = useState('');
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
-
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
     }
   }, [user, authLoading, router]);
+  
+  const expensesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(firestore, 'users', user.uid, 'expenses'),
+      orderBy('date', 'desc')
+    );
+  }, [firestore, user]);
 
-  useEffect(() => {
-    if (user) {
-      setLoading(true);
-      const q = query(
-        collection(db, 'expenses'), 
-        where('userId', '==', user.uid),
-        orderBy('date', 'desc')
-      );
-      
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const userExpenses: Expense[] = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          userExpenses.push({
-            id: doc.id,
-            ...data,
-            date: data.date.toDate(),
-          } as Expense);
-        });
-        setExpenses(userExpenses);
-        setLoading(false);
-      });
-
-      return () => unsubscribe();
-    }
-  }, [user]);
+  const { data: expenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery);
 
   const handleGenerateSummary = async () => {
-    if (expenses.length === 0) {
+    if (!expenses || expenses.length === 0) {
       setSummary("You don't have any expenses logged yet. Start adding expenses to get a summary.");
       setIsSummaryDialogOpen(true);
       return;
@@ -78,10 +60,10 @@ export default function DashboardPage() {
     try {
       const formattedExpenses = expenses.map(e => ({
         ...e,
-        date: e.date.toISOString().split('T')[0],
-        timestamp: e.date.getTime(),
+        date: (e.date as unknown as { toDate: () => Date }).toDate().toISOString().split('T')[0],
+        timestamp: (e.date as unknown as { toDate: () => Date }).toDate().getTime(),
       }));
-      const result = await generateFinancialSummary({ expenses: formattedExpenses });
+      const result = await generateFinancialSummary({ expenses: formattedExpenses as any });
       setSummary(result.summary);
     } catch (error) {
       console.error('Error generating summary:', error);
@@ -91,7 +73,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (authLoading || loading || !user) {
+  if (authLoading || expensesLoading || !user) {
     return (
       <div className="flex flex-col min-h-screen">
         <Header user={null} onGenerateSummary={() => {}} />
@@ -116,7 +98,7 @@ export default function DashboardPage() {
     <div className="flex flex-col min-h-screen bg-background">
       <Header user={user} onGenerateSummary={handleGenerateSummary} />
       <main className="flex-1 p-4 md:p-6 lg:p-8">
-        {expenses.length === 0 ? (
+        {!expenses || expenses.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-16">
             <PiggyBank className="w-16 h-16 mb-4 text-primary" />
             <h2 className="text-2xl font-bold mb-2">Welcome to SpendWise!</h2>

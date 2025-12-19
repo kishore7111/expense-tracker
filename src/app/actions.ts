@@ -1,9 +1,16 @@
 'use server';
 
-import { doc, addDoc, updateDoc, deleteDoc, collection, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client'; // Server can use client config for this app
-import { categorizeExpense } from '@/ai/flows/categorize-expense';
+import { doc, collection, Timestamp } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
+import { getSdks } from '@/firebase';
+import { initializeApp, getApp } from 'firebase/app';
+import { categorizeExpense } from '@/ai/flows/categorize-expense';
+import { 
+  addDocumentNonBlocking,
+  updateDocumentNonBlocking,
+  deleteDocumentNonBlocking
+} from '@/firebase/non-blocking-updates';
+import { firebaseConfig } from '@/firebase/config';
 
 type ExpenseInput = {
   userId: string;
@@ -13,7 +20,14 @@ type ExpenseInput = {
   date: Date;
 };
 
+function getDb() {
+  const app = getApp();
+  const { firestore } = getSdks(app);
+  return firestore;
+}
+
 export async function addExpense(expenseData: ExpenseInput) {
+  const db = getDb();
   let category = expenseData.category;
 
   if (!category) {
@@ -25,19 +39,24 @@ export async function addExpense(expenseData: ExpenseInput) {
       category = 'Other';
     }
   }
+  
+  const collectionRef = collection(db, 'users', expenseData.userId, 'expenses');
 
-  await addDoc(collection(db, 'expenses'), {
+  addDocumentNonBlocking(collectionRef, {
     ...expenseData,
     category,
     date: Timestamp.fromDate(expenseData.date),
+    timestamp: new Date().getTime(),
   });
 
   revalidatePath('/');
 }
 
-export async function updateExpense(id: string, expenseData: ExpenseInput) {
-  const docRef = doc(db, 'expenses', id);
-  await updateDoc(docRef, {
+export async function updateExpense(expenseId: string, expenseData: ExpenseInput) {
+  const db = getDb();
+  const docRef = doc(db, 'users', expenseData.userId, 'expenses', expenseId);
+  
+  updateDocumentNonBlocking(docRef, {
       ...expenseData,
       date: Timestamp.fromDate(expenseData.date),
   });
@@ -45,9 +64,10 @@ export async function updateExpense(id: string, expenseData: ExpenseInput) {
   revalidatePath('/');
 }
 
-export async function deleteExpense(id: string) {
-  const docRef = doc(db, 'expenses', id);
-  await deleteDoc(docRef);
+export async function deleteExpense(userId: string, expenseId: string) {
+  const db = getDb();
+  const docRef = doc(db, 'users', userId, 'expenses', expenseId);
+  deleteDocumentNonBlocking(docRef);
 
   revalidatePath('/');
 }

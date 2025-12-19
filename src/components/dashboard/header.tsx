@@ -12,11 +12,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, User, Wallet, Bot } from 'lucide-react';
+import { LogOut, Bot } from 'lucide-react';
 import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client';
 import { useRouter } from 'next/navigation';
 import ExpenseForm from './expense-form';
+import { useAuth } from '@/firebase';
+import { Wallet } from 'lucide-react';
 
 type HeaderProps = {
   user: FirebaseUser | null;
@@ -25,6 +26,7 @@ type HeaderProps = {
 
 export default function Header({ user, onGenerateSummary }: HeaderProps) {
   const router = useRouter();
+  const auth = useAuth();
 
   const handleLogout = async () => {
     await signOut(auth);

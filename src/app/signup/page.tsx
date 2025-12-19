@@ -6,14 +6,15 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createUserWithEmailAndPassword, AuthErrorCodes } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client';
+import { AuthErrorCodes } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Wallet } from 'lucide-react';
 import AuthLayout from '@/components/auth-layout';
+import { useAuth } from '@/firebase';
+import { initiateEmailSignUp } from '@/firebase/non-blocking-login';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -22,6 +23,7 @@ const formSchema = z.object({
 
 export default function SignupPage() {
   const router = useRouter();
+  const auth = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -37,7 +39,7 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
     try {
-      await createUserWithEmailAndPassword(auth, values.email, values.password);
+      initiateEmailSignUp(auth, values.email, values.password);
       router.push('/');
     } catch (err: any) {
       if (err.code === AuthErrorCodes.EMAIL_EXISTS) {

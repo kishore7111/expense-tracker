@@ -22,8 +22,8 @@ export default function RecentExpenses({ expenses }: RecentExpensesProps) {
     }).format(amount);
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const formatDate = (date: any) => {
+    return date.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
   
   return (
