@@ -1,32 +1,18 @@
+
 /**
  * This Firestore Security Ruleset implements a strict, user-centric security model
- * for the SpendWise application.
+ * for the SpendWise application, now with support for an 'admin' role.
  *
  * Core Philosophy:
- * The rules are built on the principle of data ownership. Each user has complete
- * control over their own data, and absolutely no access to the data of other users.
- * This ensures strong privacy and data isolation between accounts.
- *
- * Data Structure:
- * All user-specific data is organized hierarchically under a top-level `users`
- * collection. A user's profile is located at `/users/{userId}`, and their
- * related data, such as expenses, is stored in subcollections like
- * `/users/{userId}/expenses/{expenseId}`. This path-based structure is key to
- * implementing efficient and secure access control.
+ * The rules are built on data ownership. Regular users have complete control over
+ * their own data. A new 'admin' role has read-all access for oversight.
  *
  * Key Security Decisions:
- * - User Enumeration is Disallowed: Listing the top-level `/users` collection is
- *   explicitly forbidden to prevent malicious actors from harvesting a list of
- *   all application users.
- * - Path-Based Authorization: All security decisions are made based on the user's
- *   authenticated UID matching the `{userId}` wildcard in the document path. This
- *   avoids costly and complex `get()` calls to other documents for authorization.
- * - Immutable Ownership Links: Once a document is created (e.g., an expense), its
- *   link to the parent user (the `userId` field within the document) is enforced
- *   as immutable to prevent data from being reassigned to another user.
+ * - Admin Read-All: Admins can read all user profiles and all expenses, but cannot
+ *   write or delete data that doesn't belong to them. This provides a safe
+ *   separation of concerns.
  * - Secure Defaults: Client-side deletion of root user profile documents is
- *   disallowed as a safeguard. Such operations are typically handled by trusted
- *   server-side processes.
+ *   disallowed as a safeguard.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -34,82 +20,54 @@ service cloud.firestore {
 
     // --- Authorization Helper Functions ---
 
-    /**
-     * Checks if a user is authenticated.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the authenticated user's UID matches the provided userId.
-     * This is the foundation of the ownership model.
-     * @param userId The user ID to check against the authenticated user.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * Checks for ownership on an existing document. Used for update and delete
-     * operations to prevent acting on documents that do not exist.
-     * @param userId The user ID to check for ownership.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    function isRequestingUserAdmin() {
+      return isSignedIn() && getUserRole(request.auth.uid) == 'admin';
     }
 
 
-    // --- Data Validation Helper Functions (Prototyping Mode) ---
-
-    /**
-     * Validates a new user profile document.
-     * Ensures the creator is the owner and the internal 'id' field matches the
-     * document path's userId for relational integrity.
-     */
+    // --- Data Validation Helper Functions ---
     function isCreatingOwnProfile(userId) {
-      return isOwner(userId) && request.resource.data.id == userId;
+      // Ensure the 'role' is set to 'user' on creation and not admin.
+      return isOwner(userId) && request.resource.data.id == userId && request.resource.data.role == 'user';
     }
 
-    /**
-     * Validates an update to a user profile document.
-     * Ensures the editor is the owner and that the 'id' field remains unchanged.
-     */
     function isUpdatingOwnProfile(userId) {
-      return isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      // Prevent users from changing their own role.
+      return isOwner(userId) && request.resource.data.id == resource.data.id && request.resource.data.role == resource.data.role;
     }
 
-    /**
-     * Validates a new expense document.
-     * Ensures the creator owns the data and that the internal 'userId' field
-     * correctly points back to their own user ID.
-     */
     function isCreatingOwnExpense(userId) {
       return isOwner(userId) && request.resource.data.userId == userId;
     }
 
-    /**
-     * Validates an update to an expense document.
-     * Ensures the editor is the owner and that the 'userId' field cannot be changed,
-     * preventing the expense from being reassigned to another user.
-     */
     function isUpdatingOwnExpense(userId) {
-      return isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      return isOwner(userId) && request.resource.data.userId == resource.data.userId;
     }
 
 
     /**
      * @description Manages user profile documents.
      * @path /users/{userId}
-     * @allow A signed-in user (create)s their own profile document, where their auth UID matches {userId}.
-     * @allow An existing user (get)s or (update)s their own profile document.
-     * @deny A user tries to (list) all users in the collection.
-     * @deny A user tries to (delete) their own profile document.
-     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     * @allow A user can get their own profile. An admin can get any profile.
+     * @allow An admin can list all users.
+     * @allow A user can create their own profile (defaults to 'user' role).
+     * @allow A user can update their own profile (but not their role).
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
+      allow get: if isOwner(userId) || isRequestingUserAdmin();
+      allow list: if isRequestingUserAdmin();
       allow create: if isCreatingOwnProfile(userId);
       allow update: if isUpdatingOwnProfile(userId);
       allow delete: if false;
@@ -118,16 +76,15 @@ service cloud.firestore {
     /**
      * @description Manages individual expense records for a specific user.
      * @path /users/{userId}/expenses/{expenseId}
-     * @allow A user (create)s, (get)s, (list)s, (update)s, or (delete)s expenses under their own user ID.
-     * @deny A user attempts to access any expense data under a different {userId}.
-     * @principle Enforces document ownership for all operations based on the document's path.
+     * @allow A user can perform all actions on their own expenses.
+     * @allow An admin can read (get, list) any user's expenses.
      */
     match /users/{userId}/expenses/{expenseId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) || isRequestingUserAdmin();
+      allow list: if isOwner(userId) || isRequestingUserAdmin();
       allow create: if isCreatingOwnExpense(userId);
       allow update: if isUpdatingOwnExpense(userId);
-      allow delete: if isExistingOwner(userId);
+      allow delete: if isOwner(userId);
     }
   }
 }
