@@ -18,7 +18,7 @@ function createUserProfile(firestore: Firestore, user: UserCredential['user']) {
   const userProfileRef = doc(firestore, 'users', user.uid);
   const profileData = {
     email: user.email,
-    role: 'user', // Default role for new sign-ups
+    role: 'admin', // Temporarily set to 'admin' for testing
   };
   setDoc(userProfileRef, profileData, { merge: true }).catch(error => {
     errorEmitter.emit(
