@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -13,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Wallet } from 'lucide-react';
 import AuthLayout from '@/components/auth-layout';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { initiateEmailSignUp } from '@/firebase/non-blocking-login';
 
 const formSchema = z.object({
@@ -24,6 +25,7 @@ const formSchema = z.object({
 export default function SignupPage() {
   const router = useRouter();
   const auth = useAuth();
+  const { user, isUserLoading } = useUser();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -34,6 +36,13 @@ export default function SignupPage() {
       password: '',
     },
   });
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.push('/');
+    }
+  }, [user, isUserLoading, router]);
+
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);

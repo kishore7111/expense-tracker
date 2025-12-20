@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -13,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Wallet } from 'lucide-react';
 import AuthLayout from '@/components/auth-layout';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
 
 const formSchema = z.object({
@@ -24,6 +25,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
+  const { user, isUserLoading } = useUser();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -35,13 +37,17 @@ export default function LoginPage() {
     },
   });
 
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.push('/');
+    }
+  }, [user, isUserLoading, router]);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     setError(null);
     try {
-      // Non-blocking call
       await initiateEmailSignIn(auth, values.email, values.password);
-      // The onAuthStateChanged listener in the provider will handle the redirect
     } catch (err: any) {
       if (err.code === AuthErrorCodes.INVALID_LOGIN_CREDENTIALS || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
         setError('Invalid email or password. Please try again.');

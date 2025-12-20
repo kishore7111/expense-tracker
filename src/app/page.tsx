@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -23,6 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import LandingPage from '@/components/landing-page';
 
 export default function DashboardPage() {
   const { user, isUserLoading: authLoading } = useUser();
@@ -33,11 +35,8 @@ export default function DashboardPage() {
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, authLoading, router]);
+  // This effect can be simplified. The `useUser` hook already manages auth state.
+  // We'll primarily use `authLoading` and `user` to decide what to render.
   
   const expensesQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -73,7 +72,8 @@ export default function DashboardPage() {
     }
   };
 
-  if (authLoading || expensesLoading || !user) {
+  // Loading state: Show skeletons while checking auth or loading initial data
+  if (authLoading) {
     return (
       <div className="flex flex-col min-h-screen">
         <Header user={null} onGenerateSummary={() => {}} />
@@ -94,11 +94,29 @@ export default function DashboardPage() {
     );
   }
 
+  // If not loading and no user, show the landing page
+  if (!user) {
+    return <LandingPage />;
+  }
+  
+  // If we have a user, show the dashboard
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header user={user} onGenerateSummary={handleGenerateSummary} />
       <main className="flex-1 p-4 md:p-6 lg:p-8">
-        {!expenses || expenses.length === 0 ? (
+        {expensesLoading ? (
+            <div className="grid gap-6">
+                <div className="grid md:grid-cols-3 gap-6">
+                    <Skeleton className="h-36" />
+                    <Skeleton className="h-36" />
+                    <Skeleton className="h-36" />
+                </div>
+                <div className="grid md:grid-cols-2 gap-6">
+                    <Skeleton className="h-80" />
+                    <Skeleton className="h-80" />
+                </div>
+            </div>
+        ) : !expenses || expenses.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-16">
             <PiggyBank className="w-16 h-16 mb-4 text-primary" />
             <h2 className="text-2xl font-bold mb-2">Welcome to SpendWise!</h2>

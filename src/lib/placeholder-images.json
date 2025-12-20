@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero",
+      "description": "A vibrant image of a person working on a laptop with financial charts on the screen.",
+      "imageUrl": "https://images.unsplash.com/photo-1748439435495-722cc1728b7e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxmaW5hbmNlJTIwZGFzaGJvYXJkfGVufDB8fHx8MTc2NjE5NDc0OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "finance dashboard"
+    },
+    {
+      "id": "feature1",
+      "description": "A close-up of a colorful pie chart showing expense categories.",
+      "imageUrl": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxkYXRhJTIwdmlzdWFsaXphdGlvbnxlbnwwfHx8fDE3NjYxMzI2NTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "data visualization"
+    },
+    {
+      "id": "feature2",
+      "description": "An image showing a smartphone with the SpendWise app interface.",
+      "imageUrl": "https://images.unsplash.com/photo-1512428559087-560fa5ceab42?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxtb2JpbGUlMjBhcHB8ZW58MHx8fHwxNzY2MTM2NjA0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mobile app"
+    }
+  ]
 }
