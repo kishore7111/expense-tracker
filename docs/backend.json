@@ -2,15 +2,10 @@
 {
   "entities": {
     "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
       "description": "Represents a user of the SpendWise application.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user entity."
-        },
         "email": {
           "type": "string",
           "description": "User's email address.",
@@ -23,24 +18,18 @@
         }
       },
       "required": [
-        "id",
         "email",
         "role"
       ]
     },
     "Expense": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Expense",
       "type": "object",
       "description": "Represents an expense record for a user.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the expense entity."
-        },
         "userId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Expense)"
+          "description": "Reference to the User who owns this expense."
         },
         "title": {
           "type": "string",
@@ -65,7 +54,6 @@
         }
       },
       "required": [
-        "id",
         "userId",
         "title",
         "amount",
@@ -77,8 +65,7 @@
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
@@ -90,11 +77,11 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profiles.  Path-based ownership ensures only the authenticated user (identified by userId) can access their own profile data. This collection is primarily used for storing user-related information like email, etc.",
+          "description": "Stores user profiles, including their role. Path-based ownership ensures only the authenticated user (identified by userId) can access their own profile data, while admins can read any profile.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user.  Corresponds to the Firebase Auth UID."
+              "description": "The unique identifier for the user. Corresponds to the Firebase Auth UID."
             }
           ]
         }
@@ -106,7 +93,7 @@
           "schema": {
             "$ref": "#/backend/entities/Expense"
           },
-          "description": "Stores expense data for each user. Path-based ownership (`/users/{userId}/expenses/{expenseId}`) ensures that only the authenticated user can access expenses under their ID, enabling secure list operations. Authorization Independence is achieved because expense documents are located under the user id in a hierarchy and ownership can be validated in rules without `get()` calls.",
+          "description": "Stores expense data for each user. Path-based ownership ensures that only the authenticated user can manage their own expenses, while admins can view them.",
           "params": [
             {
               "name": "userId",
@@ -119,7 +106,6 @@
           ]
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and easily maintainable data model for the SpendWise application, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). The structure primarily leverages path-based ownership for user expenses, ensuring that only the authenticated user can access their own data. Authorization Independence is achieved because expense documents do not need to `get()` user documents to check authorization. QAPs are supported by segregating data based on user ownership, which allows for secure list operations using path-based rules. This design avoids complex rule logic and ensures that list operations are inherently secure. The timestamp field is included to enable ordered queries and chronological display of expenses."
+    ]
   }
 }

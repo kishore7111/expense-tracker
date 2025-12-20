@@ -40,12 +40,12 @@ service cloud.firestore {
     // --- Data Validation Helper Functions ---
     function isCreatingOwnProfile(userId) {
       // Ensure the 'role' is set to 'user' on creation and not admin.
-      return isOwner(userId) && request.resource.data.id == userId && request.resource.data.role == 'user';
+      return isOwner(userId) && request.resource.data.role == 'user';
     }
 
     function isUpdatingOwnProfile(userId) {
       // Prevent users from changing their own role.
-      return isOwner(userId) && request.resource.data.id == resource.data.id && request.resource.data.role == resource.data.role;
+      return isOwner(userId) && request.resource.data.role == resource.data.role;
     }
 
     function isCreatingOwnExpense(userId) {
@@ -70,7 +70,7 @@ service cloud.firestore {
       allow list: if isRequestingUserAdmin();
       allow create: if isCreatingOwnProfile(userId);
       allow update: if isUpdatingOwnProfile(userId);
-      allow delete: if false;
+      allow delete: if false; // Disallow client-side deletion of user docs
     }
 
     /**

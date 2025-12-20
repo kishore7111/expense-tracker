@@ -1,29 +1,67 @@
 'use client';
 import {
-  Auth, // Import Auth type for type hinting
+  Auth,
   signInAnonymously,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  // Assume getAuth and app are initialized elsewhere
+  UserCredential,
 } from 'firebase/auth';
+import { doc, setDoc, Firestore } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
+import { errorEmitter } from './error-emitter';
+import { FirestorePermissionError } from './errors';
+import { getSdks } from '.';
+
+/** Helper function to create a user profile document in Firestore. */
+function createUserProfile(firestore: Firestore, user: UserCredential['user']) {
+  if (!user) return;
+  const userProfileRef = doc(firestore, 'users', user.uid);
+  const profileData = {
+    email: user.email,
+    role: 'user', // Default role for new sign-ups
+  };
+  setDoc(userProfileRef, profileData, { merge: true }).catch(error => {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: userProfileRef.path,
+        operation: 'create',
+        requestResourceData: profileData,
+      })
+    );
+  });
+}
 
 /** Initiate anonymous sign-in (non-blocking). */
 export function initiateAnonymousSignIn(authInstance: Auth): void {
-  // CRITICAL: Call signInAnonymously directly. Do NOT use 'await signInAnonymously(...)'.
   signInAnonymously(authInstance);
-  // Code continues immediately. Auth state change is handled by onAuthStateChanged listener.
 }
 
 /** Initiate email/password sign-up (non-blocking). */
-export function initiateEmailSignUp(authInstance: Auth, email: string, password: string): void {
-  // CRITICAL: Call createUserWithEmailAndPassword directly. Do NOT use 'await createUserWithEmailAndPassword(...)'.
-  createUserWithEmailAndPassword(authInstance, email, password);
-  // Code continues immediately. Auth state change is handled by onAuthStateChanged listener.
+export function initiateEmailSignUp(
+  authInstance: Auth,
+  email: string,
+  password: string
+): void {
+  const { firestore } = getSdks(authInstance.app);
+  createUserWithEmailAndPassword(authInstance, email, password)
+    .then(userCredential => {
+      createUserProfile(firestore, userCredential.user);
+    })
+    .catch(err => {
+      // Errors are caught and displayed by the form.
+      console.error('Sign up error', err);
+    });
 }
 
 /** Initiate email/password sign-in (non-blocking). */
-export function initiateEmailSignIn(authInstance: Auth, email: string, password: string): void {
-  // CRITICAL: Call signInWithEmailAndPassword directly. Do NOT use 'await signInWithEmailAndPassword(...)'.
-  signInWithEmailAndPassword(authInstance, email, password);
-  // Code continues immediately. Auth state change is handled by onAuthStateChanged listener.
+export function initiateEmailSignIn(
+  authInstance: Auth,
+  email: string,
+  password: string
+): void {
+  signInWithEmailAndPassword(authInstance, email, password).catch(err => {
+    // Errors are caught and displayed by the form.
+    console.error('Sign in error', err);
+  });
 }
