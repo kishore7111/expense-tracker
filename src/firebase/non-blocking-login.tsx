@@ -42,16 +42,14 @@ export function initiateEmailSignUp(
   authInstance: Auth,
   email: string,
   password: string
-): void {
+): Promise<UserCredential> {
   const { firestore } = getSdks(authInstance.app);
-  createUserWithEmailAndPassword(authInstance, email, password)
-    .then(userCredential => {
+  return createUserWithEmailAndPassword(authInstance, email, password).then(
+    userCredential => {
       createUserProfile(firestore, userCredential.user);
-    })
-    .catch(err => {
-      // Errors are caught and displayed by the form.
-      console.error('Sign up error', err);
-    });
+      return userCredential;
+    }
+  );
 }
 
 /** Initiate email/password sign-in (non-blocking). */
@@ -59,9 +57,6 @@ export function initiateEmailSignIn(
   authInstance: Auth,
   email: string,
   password: string
-): void {
-  signInWithEmailAndPassword(authInstance, email, password).catch(err => {
-    // Errors are caught and displayed by the form.
-    console.error('Sign in error', err);
-  });
+): Promise<UserCredential> {
+  return signInWithEmailAndPassword(authInstance, email, password);
 }
