@@ -2,81 +2,30 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { collection, query, where, orderBy } from 'firebase/firestore';
-import { PiggyBank, ReceiptText } from 'lucide-react';
+import { doc } from 'firebase/firestore';
 
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import type { Expense } from '@/lib/types';
-
-import Header from '@/components/dashboard/header';
-import StatsCards from '@/components/dashboard/stats-cards';
-import CategoryChart from '@/components/dashboard/category-chart';
-import RecentExpenses from '@/components/dashboard/recent-expenses';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import type { UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { generateFinancialSummary } from '@/ai/flows/generate-financial-summary';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import LandingPage from '@/components/landing-page';
+import UserDashboard from '@/components/dashboard/user-dashboard';
+import AdminDashboard from '@/components/admin/admin-dashboard';
 
 export default function DashboardPage() {
   const { user, isUserLoading: authLoading } = useUser();
-  const router = useRouter();
   const firestore = useFirestore();
 
-  const [summary, setSummary] = useState('');
-  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
-  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
-
-  // This effect can be simplified. The `useUser` hook already manages auth state.
-  // We'll primarily use `authLoading` and `user` to decide what to render.
-  
-  const expensesQuery = useMemoFirebase(() => {
+  const userProfileRef = useMemoFirebase(() => {
     if (!user) return null;
-    return query(
-      collection(firestore, 'users', user.uid, 'expenses'),
-      orderBy('date', 'desc')
-    );
+    return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: expenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery);
-
-  const handleGenerateSummary = async () => {
-    if (!expenses || expenses.length === 0) {
-      setSummary("You don't have any expenses logged yet. Start adding expenses to get a summary.");
-      setIsSummaryDialogOpen(true);
-      return;
-    }
-    setIsSummaryLoading(true);
-    setIsSummaryDialogOpen(true);
-    try {
-      const formattedExpenses = expenses.map(e => ({
-        ...e,
-        date: (e.date as unknown as { toDate: () => Date }).toDate().toISOString().split('T')[0],
-        timestamp: (e.date as unknown as { toDate: () => Date }).toDate().getTime(),
-      }));
-      const result = await generateFinancialSummary({ expenses: formattedExpenses as any });
-      setSummary(result.summary);
-    } catch (error) {
-      console.error('Error generating summary:', error);
-      setSummary('Sorry, we could not generate a summary at this time.');
-    } finally {
-      setIsSummaryLoading(false);
-    }
-  };
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   // Loading state: Show skeletons while checking auth or loading initial data
-  if (authLoading) {
+  if (authLoading || (user && isProfileLoading)) {
     return (
       <div className="flex flex-col min-h-screen">
-        <Header user={null} onGenerateSummary={() => {}} />
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="grid gap-6">
             <div className="grid md:grid-cols-3 gap-6">
@@ -98,72 +47,15 @@ export default function DashboardPage() {
   if (!user) {
     return <LandingPage />;
   }
-  
-  // If we have a user, show the dashboard
+
+  // If we have a user, show the appropriate dashboard
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <Header user={user} onGenerateSummary={handleGenerateSummary} />
-      <main className="flex-1 p-4 md:p-6 lg:p-8">
-        {expensesLoading ? (
-            <div className="grid gap-6">
-                <div className="grid md:grid-cols-3 gap-6">
-                    <Skeleton className="h-36" />
-                    <Skeleton className="h-36" />
-                    <Skeleton className="h-36" />
-                </div>
-                <div className="grid md:grid-cols-2 gap-6">
-                    <Skeleton className="h-80" />
-                    <Skeleton className="h-80" />
-                </div>
-            </div>
-        ) : !expenses || expenses.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center py-16">
-            <PiggyBank className="w-16 h-16 mb-4 text-primary" />
-            <h2 className="text-2xl font-bold mb-2">Welcome to SpendWise!</h2>
-            <p className="text-muted-foreground">You haven&apos;t added any expenses yet. Click the &quot;Add Expense&quot; button to get started.</p>
-          </div>
-        ) : (
-          <div className="grid gap-6 md:gap-8">
-            <StatsCards expenses={expenses} />
-            <div className="grid md:grid-cols-5 gap-6 md:gap-8">
-              <div className="md:col-span-2">
-                <CategoryChart expenses={expenses} />
-              </div>
-              <div className="md:col-span-3">
-                <RecentExpenses expenses={expenses} />
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-      
-      <AlertDialog open={isSummaryDialogOpen} onOpenChange={setIsSummaryDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <ReceiptText className="text-primary" />
-              Your Financial Summary
-              </AlertDialogTitle>
-            <AlertDialogDescription>
-              Here is an AI-generated summary of your spending habits.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {isSummaryLoading ? (
-            <div className="space-y-2 py-4">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-            </div>
-          ) : (
-            <div className="text-sm text-foreground py-4 max-h-[300px] overflow-y-auto">
-              {summary}
-            </div>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setIsSummaryDialogOpen(false)}>Got it!</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+    <div className="flex flex-col min-h-screen">
+      {userProfile?.role === 'admin' ? (
+        <AdminDashboard user={user} />
+      ) : (
+        <UserDashboard user={user} />
+      )}
     </div>
   );
 }

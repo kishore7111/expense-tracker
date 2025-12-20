@@ -73,15 +73,18 @@ const formSchema = z.object({
 
 type ExpenseFormProps = {
   expense?: Expense;
+  userId?: string;
 };
 
-export default function ExpenseForm({ expense }: ExpenseFormProps) {
+export default function ExpenseForm({ expense, userId: propUserId }: ExpenseFormProps) {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
+  const userId = propUserId || user?.uid;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -103,8 +106,8 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user || !firestore) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+    if (!userId || !firestore) {
+      toast({ variant: 'destructive', title: 'Error', description: 'User not found.' });
       return;
     }
 
@@ -117,7 +120,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
 
     const expenseData = {
       ...values,
-      userId: user.uid,
+      userId: userId,
       category,
       date: Timestamp.fromDate(values.date),
       timestamp: new Date().getTime(),
@@ -125,11 +128,11 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
 
     try {
       if (expense) {
-        const docRef = doc(firestore, 'users', user.uid, 'expenses', expense.id);
+        const docRef = doc(firestore, 'users', userId, 'expenses', expense.id);
         updateDocumentNonBlocking(docRef, expenseData);
         toast({ title: 'Success', description: 'Expense updated successfully.' });
       } else {
-        const collectionRef = collection(firestore, 'users', user.uid, 'expenses');
+        const collectionRef = collection(firestore, 'users', userId, 'expenses');
         addDocumentNonBlocking(collectionRef, expenseData);
         toast({ title: 'Success', description: 'Expense added successfully.' });
       }
@@ -146,11 +149,11 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
   }
 
   const handleDelete = async () => {
-    if (!user || !expense || !firestore) {
+    if (!userId || !expense || !firestore) {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not delete expense.' });
       return;
     }
-    const docRef = doc(firestore, 'users', user.uid, 'expenses', expense.id);
+    const docRef = doc(firestore, 'users', userId, 'expenses', expense.id);
     deleteDocumentNonBlocking(docRef);
     await revalidateDashboard();
     toast({ title: 'Success', description: 'Expense deleted.' });
@@ -285,7 +288,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete your expense.
+                        This action cannot be undone. This will permanently delete this expense.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
