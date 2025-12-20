@@ -7,7 +7,6 @@ import {
   UserCredential,
 } from 'firebase/auth';
 import { doc, setDoc, Firestore } from 'firebase/firestore';
-import { getFirestore } from 'firebase/firestore';
 import { errorEmitter } from './error-emitter';
 import { FirestorePermissionError } from './errors';
 import { getSdks } from '.';
@@ -18,7 +17,7 @@ function createUserProfile(firestore: Firestore, user: UserCredential['user']) {
   const userProfileRef = doc(firestore, 'users', user.uid);
   const profileData = {
     email: user.email,
-    role: 'admin', // Temporarily set to 'admin' for testing
+    // No role is set by default anymore.
   };
   setDoc(userProfileRef, profileData, { merge: true }).catch(error => {
     errorEmitter.emit(

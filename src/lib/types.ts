@@ -25,5 +25,4 @@ export type ExpenseCategory = typeof expenseCategories[number];
 export type UserProfile = {
   id: string;
   email: string;
-  role: 'user' | 'admin';
 };

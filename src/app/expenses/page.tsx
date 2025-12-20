@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import type { Expense, ExpenseCategory, UserProfile } from '@/lib/types';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import type { Expense, ExpenseCategory } from '@/lib/types';
 import { expenseCategories } from '@/lib/types';
 import Header from '@/components/dashboard/header';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,29 +24,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useSearchParams } from 'next/navigation';
-
 
 export default function ExpensesPage() {
   const { user, isUserLoading: authLoading } = useUser();
   const router = useRouter();
   const firestore = useFirestore();
-  const searchParams = useSearchParams();
-  const adminViewedUserId = searchParams.get('userId');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | 'all'>('all');
-
-  const userProfileRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
-  const viewedUserId = userProfile?.role === 'admin' && adminViewedUserId ? adminViewedUserId : user?.uid;
-  const isUserAdmin = userProfile?.role === 'admin';
-
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -55,9 +40,9 @@ export default function ExpensesPage() {
   }, [user, authLoading, router]);
 
   const expensesQuery = useMemoFirebase(() => {
-    if (!viewedUserId) return null;
-    return query(collection(firestore, 'users', viewedUserId, 'expenses'), orderBy('date', 'desc'));
-  }, [firestore, viewedUserId]);
+    if (!user) return null;
+    return query(collection(firestore, 'users', user.uid, 'expenses'), orderBy('date', 'desc'));
+  }, [firestore, user]);
 
   const { data: expenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery);
   
@@ -86,7 +71,7 @@ export default function ExpensesPage() {
     });
   };
 
-  if (authLoading || expensesLoading || !user || isProfileLoading) {
+  if (authLoading || expensesLoading || !user) {
     return (
       <div className="flex flex-col min-h-screen">
         <Header user={null} onGenerateSummary={() => {}} />
@@ -171,7 +156,7 @@ export default function ExpensesPage() {
                       <TableCell>{formatDate(expense.date)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(expense.amount)}</TableCell>
                       <TableCell className="text-right">
-                        {(!adminViewedUserId || isUserAdmin) && <ExpenseForm expense={expense} userId={viewedUserId} />}
+                        <ExpenseForm expense={expense} />
                       </TableCell>
                     </TableRow>
                   ))

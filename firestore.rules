@@ -1,24 +1,7 @@
 
-/**
- * This Firestore Security Ruleset implements a strict, user-centric security model
- * for the SpendWise application, now with support for an 'admin' role.
- *
- * Core Philosophy:
- * The rules are built on data ownership. Regular users have complete control over
- * their own data. A new 'admin' role has read-all access for oversight.
- *
- * Key Security Decisions:
- * - Admin Read-All: Admins can read all user profiles and all expenses, but cannot
- *   write or delete data that doesn't belong to them. This provides a safe
- *   separation of concerns.
- * - Secure Defaults: Client-side deletion of root user profile documents is
- *   disallowed as a safeguard.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Authorization Helper Functions ---
 
     function isSignedIn() {
       return request.auth != null;
@@ -28,24 +11,13 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
-    }
-
-    function isRequestingUserAdmin() {
-      return isSignedIn() && getUserRole(request.auth.uid) == 'admin';
-    }
-
-
     // --- Data Validation Helper Functions ---
     function isCreatingOwnProfile(userId) {
-      // Ensure the 'role' is set to 'user' on creation and not admin.
-      return isOwner(userId) && request.resource.data.role == 'user';
+      return isOwner(userId);
     }
 
     function isUpdatingOwnProfile(userId) {
-      // Prevent users from changing their own role.
-      return isOwner(userId) && request.resource.data.role == resource.data.role;
+      return isOwner(userId);
     }
 
     function isCreatingOwnExpense(userId) {
@@ -60,14 +32,11 @@ service cloud.firestore {
     /**
      * @description Manages user profile documents.
      * @path /users/{userId}
-     * @allow A user can get their own profile. An admin can get any profile.
-     * @allow An admin can list all users.
-     * @allow A user can create their own profile (defaults to 'user' role).
-     * @allow A user can update their own profile (but not their role).
+     * @allow A user can manage their own profile.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isRequestingUserAdmin();
-      allow list: if isRequestingUserAdmin();
+      allow get: if isOwner(userId);
+      allow list: if false; // Users should not be able to list all other users.
       allow create: if isCreatingOwnProfile(userId);
       allow update: if isUpdatingOwnProfile(userId);
       allow delete: if false; // Disallow client-side deletion of user docs
@@ -77,14 +46,10 @@ service cloud.firestore {
      * @description Manages individual expense records for a specific user.
      * @path /users/{userId}/expenses/{expenseId}
      * @allow A user can perform all actions on their own expenses.
-     * @allow An admin can read (get, list) any user's expenses.
      */
     match /users/{userId}/expenses/{expenseId} {
-      allow get: if isOwner(userId) || isRequestingUserAdmin();
-      allow list: if isOwner(userId) || isRequestingUserAdmin();
-      allow create: if isCreatingOwnExpense(userId);
-      allow update: if isUpdatingOwnExpense(userId);
-      allow delete: if isOwner(userId);
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
     }
   }
 }

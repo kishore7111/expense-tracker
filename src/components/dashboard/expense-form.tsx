@@ -73,10 +73,9 @@ const formSchema = z.object({
 
 type ExpenseFormProps = {
   expense?: Expense;
-  userId?: string;
 };
 
-export default function ExpenseForm({ expense, userId: propUserId }: ExpenseFormProps) {
+export default function ExpenseForm({ expense }: ExpenseFormProps) {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -84,7 +83,7 @@ export default function ExpenseForm({ expense, userId: propUserId }: ExpenseForm
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
-  const userId = propUserId || user?.uid;
+  const userId = user?.uid;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
