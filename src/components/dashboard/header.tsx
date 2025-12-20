@@ -12,12 +12,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, Bot } from 'lucide-react';
+import { LogOut, Bot, Moon, Sun } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import ExpenseForm from './expense-form';
 import { useAuth } from '@/firebase';
 import { Wallet } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 type HeaderProps = {
   user: FirebaseUser | null;
@@ -27,6 +28,7 @@ type HeaderProps = {
 export default function Header({ user, onGenerateSummary }: HeaderProps) {
   const router = useRouter();
   const auth = useAuth();
+  const { theme, setTheme } = useTheme();
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -55,6 +57,12 @@ export default function Header({ user, onGenerateSummary }: HeaderProps) {
           </Button>
 
           <ExpenseForm />
+          
+          <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Toggle theme</span>
+          </Button>
 
           {user && (
             <DropdownMenu>
