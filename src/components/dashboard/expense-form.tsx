@@ -272,21 +272,47 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                       </FormControl>
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                       <Command>
+                       <Command 
+                          filter={(value, search) => {
+                            if (value.toLowerCase().includes(search.toLowerCase())) return 1;
+                            return 0;
+                          }}
+                        >
                         <CommandInput 
                           placeholder="Search or add category..."
-                          onValueChange={(value) => form.setValue('category', value)}
+                          onValueChange={(search) => {
+                            // If the user types a new category, update the form value directly
+                             if (allCategories.every(c => c.toLowerCase() !== search.toLowerCase())) {
+                                form.setValue('category', search);
+                             }
+                          }}
                         />
                         <CommandList>
-                          <CommandEmpty>No category found. Type to add a new one.</CommandEmpty>
+                          <CommandEmpty>
+                             <div 
+                                className="py-2 px-2 text-sm cursor-pointer"
+                                onClick={() => {
+                                    // This assumes the value is already set by onValueChange
+                                    setIsCategoryPopoverOpen(false);
+                                }}
+                            >
+                                Add new category: &quot;{form.getValues('category')}&quot;
+                             </div>
+                          </CommandEmpty>
                           <CommandGroup>
                             {allCategories.map((category) => (
                               <CommandItem
                                 value={category}
                                 key={category}
                                 onSelect={(currentValue) => {
-                                  form.setValue("category", currentValue === field.value ? "" : currentValue)
-                                  setIsCategoryPopoverOpen(false)
+                                  // Capitalize first letter of each word
+                                  const formattedValue = currentValue
+                                      .split(' ')
+                                      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                                      .join(' ');
+                                  
+                                  form.setValue("category", formattedValue === field.value ? "" : formattedValue);
+                                  setIsCategoryPopoverOpen(false);
                                 }}
                               >
                                 <Check
