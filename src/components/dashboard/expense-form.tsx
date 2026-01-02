@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -59,7 +59,8 @@ import {
   updateDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
 import { Textarea } from '../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
+import NewCategoryDialog from './new-category-dialog';
 
 const formSchema = z.object({
   title: z.string().min(2, { message: 'Title must be at least 2 characters.' }),
@@ -74,6 +75,8 @@ type ExpenseFormProps = {
   userId?: string; // Optional userId for admin edits
 };
 
+const ADD_NEW_CATEGORY_VALUE = 'add-new-category';
+
 export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFormProps) {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -81,6 +84,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isNewCategoryDialogOpen, setIsNewCategoryDialogOpen] = useState(false);
   
   const userId = adminUserId || user?.uid;
 
@@ -89,34 +93,46 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
     return query(collection(firestore, 'users', userId, 'expenses'), orderBy('date', 'desc'));
   }, [firestore, userId]);
   
-  const { data: userExpenses } = useCollection<Expense>(expensesQuery);
+  const { data: userExpenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery);
+
+  const [dynamicCategories, setDynamicCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (userExpenses) {
+      const uniqueCategories = Array.from(new Set(userExpenses.map(exp => exp.category)));
+      setDynamicCategories(uniqueCategories);
+    }
+  }, [userExpenses]);
 
   const allCategories = useMemo(() => {
-    const categories = new Set(expenseCategories);
-    if (userExpenses) {
-      userExpenses.forEach(exp => categories.add(exp.category));
-    }
-    return Array.from(categories).sort();
-  }, [userExpenses]);
+    const combined = new Set([...expenseCategories, ...dynamicCategories]);
+    return Array.from(combined).sort();
+  }, [dynamicCategories]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: expense?.title ?? '',
-      description: expense?.description ?? '',
-      amount: expense?.amount ?? 0,
-      category: expense?.category ?? '',
-      date: expense?.date ? expense.date.toDate() : new Date(),
+    defaultValues: expense ? {
+      ...expense,
+      date: expense.date.toDate(),
+    } : {
+      title: '',
+      description: '',
+      amount: 0,
+      category: '',
+      date: new Date(),
     },
   });
 
   const resetForm = () => {
-    form.reset({
-      title: expense?.title ?? '',
-      description: expense?.description ?? '',
-      amount: expense?.amount ?? 0,
-      category: expense?.category ?? '',
-      date: expense?.date ? expense.date.toDate() : new Date(),
+    form.reset(expense ? {
+      ...expense,
+      date: expense.date.toDate(),
+    } : {
+      title: '',
+      description: '',
+      amount: 0,
+      category: '',
+      date: new Date(),
     });
   };
 
@@ -181,162 +197,192 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
     }
     setIsSheetOpen(open);
   };
+  
+  const handleCategoryChange = (value: string) => {
+    if (value === ADD_NEW_CATEGORY_VALUE) {
+      setIsNewCategoryDialogOpen(true);
+    } else {
+      form.setValue('category', value);
+    }
+  }
+
+  const handleNewCategorySave = (newCategory: string) => {
+    if (!allCategories.includes(newCategory)) {
+        setDynamicCategories(prev => [...prev, newCategory]);
+    }
+    form.setValue('category', newCategory, { shouldValidate: true });
+  }
 
   return (
-    <Sheet open={isSheetOpen} onOpenChange={onSheetOpenChange}>
-      <SheetTrigger asChild>
-        {expense ? (
-          <Button variant="ghost" size="icon">
-            <Edit className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Expense
-          </Button>
-        )}
-      </SheetTrigger>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>{expense ? 'Edit Expense' : 'Add New Expense'}</SheetTitle>
-          <SheetDescription>
-            {expense ? 'Update the details of your expense.' : 'Enter the details of your new expense.'}
-          </SheetDescription>
-        </SheetHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Coffee" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="e.g., Morning latte with a friend" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Amount</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+    <>
+      <Sheet open={isSheetOpen} onOpenChange={onSheetOpenChange}>
+        <SheetTrigger asChild>
+          {expense ? (
+            <Button variant="ghost" size="icon">
+              <Edit className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Expense
+            </Button>
+          )}
+        </SheetTrigger>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>{expense ? 'Edit Expense' : 'Add New Expense'}</SheetTitle>
+            <SheetDescription>
+              {expense ? 'Update the details of your expense.' : 'Enter the details of your new expense.'}
+            </SheetDescription>
+          </SheetHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
+                      <Input placeholder="e.g., Coffee" {...field} />
                     </FormControl>
-                    <SelectContent>
-                      {allCategories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="e.g., Morning latte with a friend" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select onValueChange={handleCategoryChange} value={field.value}>
                       <FormControl>
-                        <Button
-                          variant={'outline'}
-                          className={cn(
-                            'w-full pl-3 text-left font-normal',
-                            !field.value && 'text-muted-foreground'
-                          )}
-                        >
-                          {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
                       </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <SheetFooter className="pt-4">
-              {expense && (
-                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                  <AlertDialogTrigger asChild>
-                    <Button type="button" variant="destructive" className="mr-auto">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete this expense.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-              <SheetClose asChild>
-                <Button type="button" variant="outline">
-                  Cancel
+                      <SelectContent>
+                        <SelectGroup>
+                          {allCategories.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                        <SelectSeparator />
+                        <SelectItem value={ADD_NEW_CATEGORY_VALUE}>
+                          <span className="flex items-center gap-2 text-primary">
+                            <PlusCircle className="h-4 w-4"/> Add New Category...
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={'outline'}
+                            className={cn(
+                              'w-full pl-3 text-left font-normal',
+                              !field.value && 'text-muted-foreground'
+                            )}
+                          >
+                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <SheetFooter className="pt-4">
+                {expense && (
+                  <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                    <AlertDialogTrigger asChild>
+                      <Button type="button" variant="destructive" className="mr-auto">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete this expense.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+                <SheetClose asChild>
+                  <Button type="button" variant="outline">
+                    Cancel
+                  </Button>
+                </SheetClose>
+                <Button type="submit" disabled={isSubmitting || expensesLoading}>
+                  {isSubmitting ? 'Saving...' : 'Save Expense'}
                 </Button>
-              </SheetClose>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save Expense'}
-              </Button>
-            </SheetFooter>
-          </form>
-        </Form>
-      </SheetContent>
-    </Sheet>
+              </SheetFooter>
+            </form>
+          </Form>
+        </SheetContent>
+      </Sheet>
+      <NewCategoryDialog 
+        isOpen={isNewCategoryDialogOpen}
+        onOpenChange={setIsNewCategoryDialogOpen}
+        onSave={handleNewCategorySave}
+      />
+    </>
   );
 }
