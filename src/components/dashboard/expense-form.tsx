@@ -81,7 +81,6 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
   
   const userId = adminUserId || user?.uid;
 
@@ -155,7 +154,6 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
       
       await revalidateDashboard();
       setIsSheetOpen(false);
-      resetForm();
     } catch (error: any) {
       console.error(error);
       toast({ variant: 'destructive', title: 'Error', description: error.message || 'Something went wrong.' });
@@ -251,7 +249,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Category</FormLabel>
-                   <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
+                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -263,7 +261,9 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                           )}
                         >
                           {field.value
-                            ? field.value
+                            ? allCategories.find(
+                                (category) => category.toLowerCase() === field.value.toLowerCase()
+                              ) || field.value
                             : "Select category"}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -271,9 +271,25 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                        <Command>
-                        <CommandInput placeholder="Search or add category..." />
+                        <CommandInput 
+                          placeholder="Search or add category..."
+                          onValueChange={(value) => {
+                            if (!allCategories.some(c => c.toLowerCase() === value.toLowerCase())) {
+                              form.setValue("category", value)
+                            }
+                          }}
+                        />
                         <CommandList>
-                          <CommandEmpty>No category found.</CommandEmpty>
+                          <CommandEmpty>
+                            <CommandItem
+                              onSelect={() => {
+                                const inputValue = form.getValues("category");
+                                form.setValue("category", inputValue);
+                              }}
+                            >
+                              Add: {form.getValues("category")}
+                            </CommandItem>
+                          </CommandEmpty>
                           <CommandGroup>
                             {allCategories.map((category) => (
                               <CommandItem
@@ -281,7 +297,6 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                                 key={category}
                                 onSelect={(currentValue) => {
                                   form.setValue("category", currentValue === field.value ? "" : currentValue);
-                                  setIsCategoryPopoverOpen(false);
                                 }}
                               >
                                 <Check
@@ -375,5 +390,3 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
     </Sheet>
   );
 }
-
-    
