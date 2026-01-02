@@ -311,14 +311,14 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                                       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                                       .join(' ');
                                   
-                                  form.setValue("category", formattedValue === field.value ? "" : formattedValue);
+                                  form.setValue("category", formattedValue);
                                   setIsCategoryPopoverOpen(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    category.toLowerCase() === field.value.toLowerCase() ? "opacity-100" : "opacity-0"
+                                    field.value && category.toLowerCase() === field.value.toLowerCase() ? "opacity-100" : "opacity-0"
                                   )}
                                 />
                                 {category}
