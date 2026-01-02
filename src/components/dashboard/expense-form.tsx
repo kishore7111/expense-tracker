@@ -59,8 +59,7 @@ import {
   updateDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
 import { Textarea } from '../ui/textarea';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
-import { CommandList } from 'cmdk';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 const formSchema = z.object({
   title: z.string().min(2, { message: 'Title must be at least 2 characters.' }),
@@ -265,8 +264,8 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                         >
                           {field.value
                             ? allCategories.find(
-                                (category) => category === field.value
-                              )
+                                (category) => category.toLowerCase() === field.value.toLowerCase()
+                              ) ?? field.value
                             : "Select or type a category..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -276,11 +275,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                        <Command>
                         <CommandInput 
                           placeholder="Search or add category..."
-                          onValueChange={(value) => {
-                            if (!allCategories.find(c => c.toLowerCase() === value.toLowerCase())) {
-                              form.setValue('category', value)
-                            }
-                          }}
+                          onValueChange={(value) => form.setValue('category', value)}
                         />
                         <CommandList>
                           <CommandEmpty>No category found. Type to add a new one.</CommandEmpty>
@@ -289,15 +284,15 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                               <CommandItem
                                 value={category}
                                 key={category}
-                                onSelect={() => {
-                                  form.setValue("category", category)
+                                onSelect={(currentValue) => {
+                                  form.setValue("category", currentValue === field.value ? "" : currentValue)
                                   setIsCategoryPopoverOpen(false)
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    category === field.value ? "opacity-100" : "opacity-0"
+                                    category.toLowerCase() === field.value.toLowerCase() ? "opacity-100" : "opacity-0"
                                   )}
                                 />
                                 {category}
