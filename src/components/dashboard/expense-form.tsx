@@ -280,23 +280,29 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                           }}
                         />
                         <CommandList>
-                          <CommandEmpty>
-                            <CommandItem
-                              onSelect={() => {
-                                const inputValue = form.getValues("category");
-                                form.setValue("category", inputValue);
-                              }}
-                            >
-                              Add: {form.getValues("category")}
-                            </CommandItem>
+                           <CommandEmpty>
+                              {form.getValues('category')?.length > 0 && (
+                                <CommandItem
+                                  onSelect={() => {
+                                    const newCategoryValue = form.getValues('category');
+                                    form.setValue('category', newCategoryValue);
+                                    // Manually close Popover by finding the trigger and clicking it
+                                    // This is a workaround for popover not closing on custom selection
+                                    document.querySelector<HTMLButtonElement>('[role="combobox"]')?.click();
+                                  }}
+                                >
+                                  Add: "{form.getValues('category')}"
+                                </CommandItem>
+                              )}
                           </CommandEmpty>
                           <CommandGroup>
                             {allCategories.map((category) => (
                               <CommandItem
                                 value={category}
                                 key={category}
-                                onSelect={(currentValue) => {
-                                  form.setValue("category", currentValue === field.value ? "" : currentValue);
+                                onSelect={() => {
+                                  form.setValue("category", category);
+                                   document.querySelector<HTMLButtonElement>('[role="combobox"]')?.click();
                                 }}
                               >
                                 <Check
