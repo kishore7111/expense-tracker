@@ -17,9 +17,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        body: ['PT Sans', 'sans-serif'],
-        headline: ['PT Sans', 'sans-serif'],
-        code: ['monospace'],
+        body: ['"Geist Sans"', 'sans-serif'],
+        headline: ['"Geist Sans"', 'sans-serif'],
+        code: ['"Geist Mono"', 'monospace'],
       },
       colors: {
         border: "hsl(var(--border))",

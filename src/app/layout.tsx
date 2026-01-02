@@ -19,7 +19,18 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/geist-sans/geist-sans@1.3.0/css/geist-sans.min.css"
+          integrity="sha384-NBMqoy60rTzTOpGO2YjdpAbf29iOKsB31FAdh23iLfr2Gv29k6TS3+K3Y5fVjvM1"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/geist-mono/geist-mono@1.1.0/css/geist-mono.min.css"
+          integrity="sha384-g2wwDPK3nLh1K3l2p22bJjL+5x2sF/1sOITXGSb8P1Q0gV3I/s/XU/GkEwRz3K+c"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className="font-body antialiased bg-background">
         <ThemeProvider
