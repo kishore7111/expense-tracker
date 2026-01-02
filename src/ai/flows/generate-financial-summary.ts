@@ -54,6 +54,12 @@ const generateFinancialSummaryFlow = ai.defineFlow(
     outputSchema: GenerateFinancialSummaryOutputSchema,
   },
   async input => {
+    // Check for the API key again inside the flow to be safe.
+    if (!process.env.GOOGLE_API_KEY) {
+      return {
+        summary: 'The AI features are currently disabled. To enable them, please set your `GOOGLE_API_KEY` in the `.env` file and restart the application.',
+      };
+    }
     const {output} = await prompt(input);
     return output!;
   }
