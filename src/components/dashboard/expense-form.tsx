@@ -81,7 +81,6 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
   
   const userId = adminUserId || user?.uid;
 
@@ -183,17 +182,6 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
     }
     setIsOpen(open);
   };
-  
-  const handleCategorySelect = (currentValue: string) => {
-    // Capitalize first letter of each word
-    const formattedValue = currentValue
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
-    
-    form.setValue("category", formattedValue);
-    setIsCategoryPopoverOpen(false);
-  }
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -262,7 +250,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Category</FormLabel>
-                   <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
+                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -277,35 +265,24 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                             ? allCategories.find(
                                 (category) => category.toLowerCase() === field.value.toLowerCase()
                               ) ?? field.value
-                            : "Select or type a category..."}
+                            : "Select category"}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                       <Command 
-                          filter={(value, search) => {
-                            if (value.toLowerCase().includes(search.toLowerCase())) return 1;
-                            return 0;
-                          }}
-                        >
+                       <Command>
                         <CommandInput placeholder="Search or add category..." />
                         <CommandList>
-                          <CommandEmpty>
-                             <CommandItem
-                                onSelect={(currentValue) => {
-                                   handleCategorySelect(currentValue);
-                                }}
-                            >
-                                Add: &quot;{form.getValues('category')}&quot;
-                             </CommandItem>
-                          </CommandEmpty>
+                          <CommandEmpty>No category found.</CommandEmpty>
                           <CommandGroup>
                             {allCategories.map((category) => (
                               <CommandItem
                                 value={category}
                                 key={category}
-                                onSelect={handleCategorySelect}
+                                onSelect={(currentValue) => {
+                                  form.setValue("category", currentValue === field.value ? "" : currentValue)
+                                }}
                               >
                                 <Check
                                   className={cn(
