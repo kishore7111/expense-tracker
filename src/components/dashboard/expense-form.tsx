@@ -35,7 +35,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, Edit, PlusCircle, Trash2, Check, ChevronsUpDown } from 'lucide-react';
+import { CalendarIcon, Edit, PlusCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import type { Expense } from '@/lib/types';
@@ -59,7 +59,7 @@ import {
   updateDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
 import { Textarea } from '../ui/textarea';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const formSchema = z.object({
   title: z.string().min(2, { message: 'Title must be at least 2 characters.' }),
@@ -89,7 +89,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
     return query(collection(firestore, 'users', userId, 'expenses'), orderBy('date', 'desc'));
   }, [firestore, userId]);
   
-  const { data: userExpenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery);
+  const { data: userExpenses } = useCollection<Expense>(expensesQuery);
 
   const allCategories = useMemo(() => {
     const categories = new Set(expenseCategories);
@@ -247,78 +247,22 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
               control={form.control}
               name="category"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem>
                   <FormLabel>Category</FormLabel>
-                   <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          className={cn(
-                            "w-full justify-between",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value
-                            ? allCategories.find(
-                                (category) => category.toLowerCase() === field.value.toLowerCase()
-                              ) || field.value
-                            : "Select category"}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                       <Command>
-                        <CommandInput 
-                          placeholder="Search or add category..."
-                          onValueChange={(value) => {
-                            if (!allCategories.some(c => c.toLowerCase() === value.toLowerCase())) {
-                              form.setValue("category", value)
-                            }
-                          }}
-                        />
-                        <CommandList>
-                           <CommandEmpty>
-                              {form.getValues('category')?.length > 0 && (
-                                <CommandItem
-                                  onSelect={() => {
-                                    const newCategoryValue = form.getValues('category');
-                                    form.setValue('category', newCategoryValue);
-                                    // Manually close Popover by finding the trigger and clicking it
-                                    // This is a workaround for popover not closing on custom selection
-                                    document.querySelector<HTMLButtonElement>('[role="combobox"]')?.click();
-                                  }}
-                                >
-                                  Add: "{form.getValues('category')}"
-                                </CommandItem>
-                              )}
-                          </CommandEmpty>
-                          <CommandGroup>
-                            {allCategories.map((category) => (
-                              <CommandItem
-                                value={category}
-                                key={category}
-                                onSelect={() => {
-                                  form.setValue("category", category);
-                                   document.querySelector<HTMLButtonElement>('[role="combobox"]')?.click();
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    field.value && category.toLowerCase() === field.value.toLowerCase() ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {category}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {allCategories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -386,7 +330,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                   Cancel
                 </Button>
               </SheetClose>
-              <Button type="submit" disabled={isSubmitting || expensesLoading}>
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Saving...' : 'Save Expense'}
               </Button>
             </SheetFooter>
