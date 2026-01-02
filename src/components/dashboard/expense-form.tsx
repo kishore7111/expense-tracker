@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -8,6 +8,8 @@ import {
   collection,
   doc,
   Timestamp,
+  query,
+  orderBy,
 } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
@@ -30,19 +32,12 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, Edit, PlusCircle, Trash2 } from 'lucide-react';
+import { CalendarIcon, Edit, PlusCircle, Trash2, Check, ChevronsUpDown } from 'lucide-react';
 import { format } from 'date-fns';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import type { Expense } from '@/lib/types';
 import { expenseCategories } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -64,12 +59,14 @@ import {
   updateDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
 import { Textarea } from '../ui/textarea';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { CommandList } from 'cmdk';
 
 const formSchema = z.object({
   title: z.string().min(2, { message: 'Title must be at least 2 characters.' }),
   description: z.string().optional(),
   amount: z.coerce.number().positive({ message: 'Amount must be positive.' }),
-  category: z.string().optional(),
+  category: z.string().min(1, { message: 'Category is required.' }),
   date: z.date(),
 });
 
@@ -85,8 +82,24 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
   
   const userId = adminUserId || user?.uid;
+
+  const expensesQuery = useMemoFirebase(() => {
+    if (!userId) return null;
+    return query(collection(firestore, 'users', userId, 'expenses'), orderBy('date', 'desc'));
+  }, [firestore, userId]);
+  
+  const { data: userExpenses } = useCollection<Expense>(expensesQuery);
+
+  const allCategories = useMemo(() => {
+    const categories = new Set(expenseCategories);
+    if (userExpenses) {
+      userExpenses.forEach(exp => categories.add(exp.category));
+    }
+    return Array.from(categories).sort();
+  }, [userExpenses]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -237,22 +250,64 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
               control={form.control}
               name="category"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category (or let AI decide)" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {expenseCategories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                   <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            "w-full justify-between",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value
+                            ? allCategories.find(
+                                (category) => category === field.value
+                              )
+                            : "Select or type a category..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                       <Command>
+                        <CommandInput 
+                          placeholder="Search or add category..."
+                          onValueChange={(value) => {
+                            if (!allCategories.find(c => c.toLowerCase() === value.toLowerCase())) {
+                              form.setValue('category', value)
+                            }
+                          }}
+                        />
+                        <CommandList>
+                          <CommandEmpty>No category found. Type to add a new one.</CommandEmpty>
+                          <CommandGroup>
+                            {allCategories.map((category) => (
+                              <CommandItem
+                                value={category}
+                                key={category}
+                                onSelect={() => {
+                                  form.setValue("category", category)
+                                  setIsCategoryPopoverOpen(false)
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    category === field.value ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {category}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
