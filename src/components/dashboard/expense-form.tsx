@@ -63,9 +63,11 @@ import {
   deleteDocumentNonBlocking,
   updateDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
+import { Textarea } from '../ui/textarea';
 
 const formSchema = z.object({
   title: z.string().min(2, { message: 'Title must be at least 2 characters.' }),
+  description: z.string().optional(),
   amount: z.coerce.number().positive({ message: 'Amount must be positive.' }),
   category: z.string().optional(),
   date: z.date(),
@@ -73,9 +75,10 @@ const formSchema = z.object({
 
 type ExpenseFormProps = {
   expense?: Expense;
+  userId?: string; // Optional userId for admin edits
 };
 
-export default function ExpenseForm({ expense }: ExpenseFormProps) {
+export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFormProps) {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -83,12 +86,13 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
-  const userId = user?.uid;
+  const userId = adminUserId || user?.uid;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: expense?.title ?? '',
+      description: expense?.description ?? '',
       amount: expense?.amount ?? 0,
       category: expense?.category ?? '',
       date: expense?.date ? expense.date.toDate() : new Date(),
@@ -98,6 +102,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
   const resetForm = () => {
     form.reset({
       title: expense?.title ?? '',
+      description: expense?.description ?? '',
       amount: expense?.amount ?? 0,
       category: expense?.category ?? '',
       date: expense?.date ? expense.date.toDate() : new Date(),
@@ -114,7 +119,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
 
     let category = values.category;
     if (!category || category === '') {
-      category = await getAICategory(values.title);
+      category = await getAICategory(values.title, values.description);
     }
 
     const expenseData = {
@@ -197,6 +202,19 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
                   <FormLabel>Title</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., Coffee" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="e.g., Morning latte with a friend" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

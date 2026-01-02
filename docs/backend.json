@@ -29,6 +29,10 @@
           "type": "string",
           "description": "Title of the expense."
         },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the expense."
+        },
         "amount": {
           "type": "number",
           "description": "Amount of the expense."

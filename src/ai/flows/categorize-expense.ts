@@ -14,7 +14,7 @@ import {z} from 'genkit';
 
 const CategorizeExpenseInputSchema = z.object({
   title: z.string().describe('The title of the expense.'),
-  description: z.string().describe('A description of the expense.'),
+  description: z.string().optional().describe('A description of the expense.'),
 });
 export type CategorizeExpenseInput = z.infer<typeof CategorizeExpenseInputSchema>;
 
