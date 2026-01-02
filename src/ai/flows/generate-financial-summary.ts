@@ -30,6 +30,12 @@ const GenerateFinancialSummaryOutputSchema = z.object({
 export type GenerateFinancialSummaryOutput = z.infer<typeof GenerateFinancialSummaryOutputSchema>;
 
 export async function generateFinancialSummary(input: GenerateFinancialSummaryInput): Promise<GenerateFinancialSummaryOutput> {
+  // Check if the API key is missing.
+  if (!process.env.GOOGLE_API_KEY) {
+    return {
+      summary: 'The AI features are currently disabled. To enable them, please set your `GOOGLE_API_KEY` in the `.env` file and restart the application.',
+    };
+  }
   return generateFinancialSummaryFlow(input);
 }
 
