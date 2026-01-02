@@ -78,9 +78,10 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
   
   const userId = adminUserId || user?.uid;
 
@@ -153,7 +154,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
       }
       
       await revalidateDashboard();
-      setIsOpen(false);
+      setIsSheetOpen(false);
       resetForm();
     } catch (error: any) {
       console.error(error);
@@ -173,18 +174,18 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
     await revalidateDashboard();
     toast({ title: 'Success', description: 'Expense deleted.' });
     setIsDeleteDialogOpen(false);
-    setIsOpen(false);
+    setIsSheetOpen(false);
   };
 
-  const onOpenChange = (open: boolean) => {
+  const onSheetOpenChange = (open: boolean) => {
     if (open) {
       resetForm();
     }
-    setIsOpen(open);
+    setIsSheetOpen(open);
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+    <Sheet open={isSheetOpen} onOpenChange={onSheetOpenChange}>
       <SheetTrigger asChild>
         {expense ? (
           <Button variant="ghost" size="icon">
@@ -238,7 +239,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                 <FormItem>
                   <FormLabel>Amount</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="0.00" {...field} />
+                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -250,7 +251,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Category</FormLabel>
-                   <Popover>
+                   <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -262,9 +263,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                           )}
                         >
                           {field.value
-                            ? allCategories.find(
-                                (category) => category.toLowerCase() === field.value.toLowerCase()
-                              ) ?? field.value
+                            ? field.value
                             : "Select category"}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -281,7 +280,8 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                                 value={category}
                                 key={category}
                                 onSelect={(currentValue) => {
-                                  form.setValue("category", currentValue === field.value ? "" : currentValue)
+                                  form.setValue("category", currentValue === field.value ? "" : currentValue);
+                                  setIsCategoryPopoverOpen(false);
                                 }}
                               >
                                 <Check
@@ -375,3 +375,5 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
     </Sheet>
   );
 }
+
+    
