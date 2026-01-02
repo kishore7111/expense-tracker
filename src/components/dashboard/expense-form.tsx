@@ -90,7 +90,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
     return query(collection(firestore, 'users', userId, 'expenses'), orderBy('date', 'desc'));
   }, [firestore, userId]);
   
-  const { data: userExpenses } = useCollection<Expense>(expensesQuery);
+  const { data: userExpenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery);
 
   const allCategories = useMemo(() => {
     const categories = new Set(expenseCategories);
@@ -183,6 +183,17 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
     }
     setIsOpen(open);
   };
+  
+  const handleCategorySelect = (currentValue: string) => {
+    // Capitalize first letter of each word
+    const formattedValue = currentValue
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    
+    form.setValue("category", formattedValue);
+    setIsCategoryPopoverOpen(false);
+  }
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -278,42 +289,23 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                             return 0;
                           }}
                         >
-                        <CommandInput 
-                          placeholder="Search or add category..."
-                          onValueChange={(search) => {
-                            // If the user types a new category, update the form value directly
-                             if (allCategories.every(c => c.toLowerCase() !== search.toLowerCase())) {
-                                form.setValue('category', search);
-                             }
-                          }}
-                        />
+                        <CommandInput placeholder="Search or add category..." />
                         <CommandList>
                           <CommandEmpty>
-                             <div 
-                                className="py-2 px-2 text-sm cursor-pointer"
-                                onClick={() => {
-                                    // This assumes the value is already set by onValueChange
-                                    setIsCategoryPopoverOpen(false);
+                             <CommandItem
+                                onSelect={(currentValue) => {
+                                   handleCategorySelect(currentValue);
                                 }}
                             >
-                                Add new category: &quot;{form.getValues('category')}&quot;
-                             </div>
+                                Add: &quot;{form.getValues('category')}&quot;
+                             </CommandItem>
                           </CommandEmpty>
                           <CommandGroup>
                             {allCategories.map((category) => (
                               <CommandItem
                                 value={category}
                                 key={category}
-                                onSelect={(currentValue) => {
-                                  // Capitalize first letter of each word
-                                  const formattedValue = currentValue
-                                      .split(' ')
-                                      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                                      .join(' ');
-                                  
-                                  form.setValue("category", formattedValue);
-                                  setIsCategoryPopoverOpen(false);
-                                }}
+                                onSelect={handleCategorySelect}
                               >
                                 <Check
                                   className={cn(
@@ -396,7 +388,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                   Cancel
                 </Button>
               </SheetClose>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || expensesLoading}>
                 {isSubmitting ? 'Saving...' : 'Save Expense'}
               </Button>
             </SheetFooter>
