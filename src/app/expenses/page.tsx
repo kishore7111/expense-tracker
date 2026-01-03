@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { getCategoryIcon } from '@/lib/icons';
 import ExpenseForm from '@/components/dashboard/expense-form';
-import { ReceiptText, Search, FileDown } from 'lucide-react';
+import { ReceiptText, Search, FileDown, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,7 @@ import {
 import { getYear, getMonth, format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 export default function ExpensesPage() {
   const { user, isUserLoading: authLoading } = useUser();
@@ -90,6 +91,10 @@ export default function ExpensesPage() {
       day: 'numeric',
     });
   };
+  
+  const formatDateForExport = (date: any) => {
+    return date.toDate().toLocaleDateString('en-US');
+  }
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June', 
@@ -108,7 +113,7 @@ export default function ExpensesPage() {
       startY: 30,
       head: [['Date', 'Title', 'Category', 'Amount']],
       body: filteredExpenses.map(expense => [
-        formatDate(expense.date),
+        formatDateForExport(expense.date),
         expense.title,
         expense.category,
         formatCurrency(expense.amount)
@@ -119,6 +124,47 @@ export default function ExpensesPage() {
     });
 
     doc.save(`expenses-${selectedYear}-${selectedMonth + 1}.pdf`);
+  };
+
+  const handleDownloadXlsx = () => {
+    const monthName = months[selectedMonth];
+    const total = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    
+    const dataToExport = filteredExpenses.map(expense => ({
+      Date: formatDateForExport(expense.date),
+      Title: expense.title,
+      Category: expense.category,
+      Amount: expense.amount
+    }));
+
+    dataToExport.push({
+        Date: 'Total',
+        Title: '',
+        Category: '',
+        Amount: total
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+    // Style the total row
+    const totalRowIndex = dataToExport.length; // 1-based index
+    worksheet[`A${totalRowIndex}`]!.s = { font: { bold: true } };
+    worksheet[`D${totalRowIndex}`]!.s = { font: { bold: true } };
+    worksheet[`D${totalRowIndex}`]!.t = 'n';
+    worksheet[`D${totalRowIndex}`]!.z = '$#,##0.00';
+
+
+    // Set column widths
+    worksheet['!cols'] = [
+        { wch: 12 }, // Date
+        { wch: 30 }, // Title
+        { wch: 15 }, // Category
+        { wch: 10 }  // Amount
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Expenses');
+    XLSX.writeFile(workbook, `expenses-${selectedYear}-${selectedMonth + 1}.xlsx`);
   };
 
   if (authLoading || expensesLoading || !user) {
@@ -154,7 +200,7 @@ export default function ExpensesPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-4">
               <div className="relative w-full sm:max-w-xs">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -211,9 +257,14 @@ export default function ExpensesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button onClick={handleDownloadPdf} disabled={filteredExpenses.length === 0}>
-                <FileDown className="mr-2 h-4 w-4" /> Download PDF
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={handleDownloadPdf} disabled={filteredExpenses.length === 0}>
+                    <FileDown className="mr-2 h-4 w-4" /> PDF
+                </Button>
+                <Button onClick={handleDownloadXlsx} disabled={filteredExpenses.length === 0} variant="outline">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel
+                </Button>
+              </div>
             </div>
             <Table>
               <TableHeader>
