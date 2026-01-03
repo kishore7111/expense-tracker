@@ -227,7 +227,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                         <Edit className="h-4 w-4" />
                         </Button>
                     ) : (
-                        <>
+                        <div>
                         <Button className="hidden md:inline-flex">
                             <PlusCircle className="mr-2 h-4 w-4" /> Add Expense
                         </Button>
@@ -235,7 +235,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                             <PlusCircle />
                             <span className="sr-only">Add Expense</span>
                         </Button>
-                        </>
+                        </div>
                     )}
                     </SheetTrigger>
                 </TooltipTrigger>
