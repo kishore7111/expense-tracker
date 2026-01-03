@@ -12,13 +12,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, Bot, Moon, Sun } from 'lucide-react';
+import { LogOut, Bot, Moon, Sun, PlusCircle } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import ExpenseForm from './expense-form';
 import { useAuth } from '@/firebase';
 import { Wallet } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 type HeaderProps = {
   user: FirebaseUser | null;
@@ -42,22 +43,42 @@ export default function Header({ user, onGenerateSummary }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-card/80 backdrop-blur-sm">
-      <div className="container flex h-16 items-center space-x-4 px-4 sm:justify-between sm:space-x-0 md:px-6">
+      <div className="container flex h-16 items-center space-x-2 px-4 sm:justify-between sm:space-x-0 md:px-6">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 text-xl font-bold text-primary md:text-2xl">
             <Wallet className="h-7 w-7" />
-            <span className="font-headline">SpendWise</span>
+            <span className="font-headline hidden sm:inline-block">SpendWise</span>
           </Link>
         </div>
 
-        <div className="flex flex-1 items-center justify-end space-x-2 md:space-x-4">
-          <Button variant="outline" size="sm" onClick={onGenerateSummary}>
+        <div className="flex flex-1 items-center justify-end space-x-1 sm:space-x-2 md:space-x-4">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                 <Button variant="ghost" size="icon" className="md:hidden" onClick={onGenerateSummary}>
+                    <Bot />
+                    <span className="sr-only">AI Summary</span>
+                  </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>AI Summary</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <Button variant="outline" size="sm" onClick={onGenerateSummary} className="hidden md:inline-flex">
             <Bot className="mr-2 h-4 w-4" />
             AI Summary
           </Button>
 
-          <ExpenseForm />
+          <div className="md:hidden">
+            <ExpenseForm />
+          </div>
           
+          <div className="hidden md:block">
+            <ExpenseForm />
+          </div>
+
           <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
             <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />

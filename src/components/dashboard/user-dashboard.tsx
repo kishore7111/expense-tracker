@@ -77,7 +77,7 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                     <Skeleton className="h-36" />
                     <Skeleton className="h-36" />
                 </div>
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid lg:grid-cols-2 gap-6">
                     <Skeleton className="h-80" />
                     <Skeleton className="h-80" />
                 </div>
@@ -91,11 +91,11 @@ export default function UserDashboard({ user }: UserDashboardProps) {
         ) : (
           <div className="grid gap-6 md:gap-8">
             <StatsCards expenses={expenses} />
-            <div className="grid md:grid-cols-5 gap-6 md:gap-8">
-              <div className="md:col-span-2">
+            <div className="grid lg:grid-cols-5 gap-6 md:gap-8">
+              <div className="lg:col-span-2">
                 <CategoryChart expenses={expenses} />
               </div>
-              <div className="md:col-span-3">
+              <div className="lg:col-span-3">
                 <RecentExpenses expenses={expenses} />
               </div>
             </div>

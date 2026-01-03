@@ -61,6 +61,8 @@ import {
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import NewCategoryDialog from './new-category-dialog';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../ui/tooltip';
+
 
 const formSchema = z.object({
   title: z.string().min(2, { message: 'Title must be at least 2 characters.' }),
@@ -216,17 +218,33 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
   return (
     <>
       <Sheet open={isSheetOpen} onOpenChange={onSheetOpenChange}>
-        <SheetTrigger asChild>
-          {expense ? (
-            <Button variant="ghost" size="icon">
-              <Edit className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Expense
-            </Button>
-          )}
-        </SheetTrigger>
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <SheetTrigger asChild>
+                    {expense ? (
+                        <Button variant="ghost" size="icon">
+                        <Edit className="h-4 w-4" />
+                        </Button>
+                    ) : (
+                        <>
+                        <Button className="hidden md:inline-flex">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Expense
+                        </Button>
+                        <Button size="icon" className="md:hidden">
+                            <PlusCircle />
+                            <span className="sr-only">Add Expense</span>
+                        </Button>
+                        </>
+                    )}
+                    </SheetTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>{expense ? 'Edit Expense' : 'Add Expense'}</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+
         <SheetContent>
           <SheetHeader>
             <SheetTitle>{expense ? 'Edit Expense' : 'Add New Expense'}</SheetTitle>
