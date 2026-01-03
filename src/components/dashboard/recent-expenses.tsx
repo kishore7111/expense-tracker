@@ -7,12 +7,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { getCategoryIcon } from '@/lib/icons';
 import ExpenseForm from './expense-form';
-import { History, FileDown, ArrowRight } from 'lucide-react';
+import { History, ArrowRight } from 'lucide-react';
 import { Button } from '../ui/button';
 import Link from 'next/link';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-
 
 type RecentExpensesProps = {
   expenses: Expense[];
@@ -30,26 +27,6 @@ export default function RecentExpenses({ expenses }: RecentExpensesProps) {
     return date.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const handleDownloadPdf = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text('Recent Transactions', 14, 22);
-    
-    autoTable(doc, {
-      startY: 30,
-      head: [['Date', 'Title', 'Category', 'Amount']],
-      body: expenses.slice(0, 5).map(expense => [
-        formatDate(expense.date),
-        expense.title,
-        expense.category,
-        formatCurrency(expense.amount)
-      ]),
-      headStyles: { fillColor: [22, 163, 74] },
-    });
-
-    doc.save('recent-transactions.pdf');
-  };
-  
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -61,10 +38,6 @@ export default function RecentExpenses({ expenses }: RecentExpensesProps) {
           <CardDescription>Your last 5 expenses.</CardDescription>
         </div>
         <div className='flex gap-2'>
-            <Button variant="outline" size="sm" onClick={handleDownloadPdf}>
-                <FileDown className="mr-2 h-4 w-4" />
-                Download PDF
-            </Button>
             <Link href="/expenses" passHref>
               <Button variant="outline" size="sm">
                 View All
