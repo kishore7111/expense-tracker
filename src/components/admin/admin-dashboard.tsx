@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -68,7 +69,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                   users.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell className="font-medium">{u.email}</TableCell>
-                      <TableCell>{u.role}</TableCell>
+                      <TableCell>{u.role || 'user'}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" onClick={() => setSelectedUser(u)}>
                           <Eye className="mr-2 h-4 w-4" />

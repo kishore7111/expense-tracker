@@ -10,14 +10,28 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+    
+    // Admin check: checks for a custom claim on the auth token.
+    // This claim must be set via a server-side process (e.g., Firebase Functions).
+    function isAdmin() {
+      return request.auth.token.role == 'admin';
+    }
+
 
     // --- Data Validation Helper Functions ---
     function isCreatingOwnProfile(userId) {
+      // When a user signs up, their profile is created.
+      // The profile might not include a 'role' field initially.
       return isOwner(userId);
     }
 
     function isUpdatingOwnProfile(userId) {
-      return isOwner(userId);
+      // Users can update their own profile, but cannot change their role.
+      return isOwner(userId) && request.resource.data.role == resource.data.role;
+    }
+    
+    function canManageProfile(userId) {
+        return isUpdatingOwnProfile(userId) || isAdmin();
     }
 
     function isCreatingOwnExpense(userId) {
@@ -27,29 +41,37 @@ service cloud.firestore {
     function isUpdatingOwnExpense(userId) {
       return isOwner(userId) && request.resource.data.userId == resource.data.userId;
     }
+    
+    function canReadExpenses(userId) {
+      return isOwner(userId) || isAdmin();
+    }
+    
+    function canWriteExpense(userId) {
+      return isOwner(userId) || isAdmin();
+    }
 
 
     /**
      * @description Manages user profile documents.
      * @path /users/{userId}
-     * @allow A user can manage their own profile.
+     * @allow Admins can read/list all profiles. A user can manage their own profile.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false; // Users should not be able to list all other users.
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
       allow create: if isCreatingOwnProfile(userId);
-      allow update: if isUpdatingOwnProfile(userId);
+      allow update: if canManageProfile(userId);
       allow delete: if false; // Disallow client-side deletion of user docs
     }
 
     /**
      * @description Manages individual expense records for a specific user.
      * @path /users/{userId}/expenses/{expenseId}
-     * @allow A user can perform all actions on their own expenses.
+     * @allow An admin can read/write any expense. A user can manage their own.
      */
     match /users/{userId}/expenses/{expenseId} {
-      allow read: if isOwner(userId);
-      allow write: if isOwner(userId);
+      allow read: if canReadExpenses(userId);
+      allow write: if canWriteExpense(userId);
     }
   }
 }

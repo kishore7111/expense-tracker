@@ -10,6 +10,11 @@
           "type": "string",
           "description": "User's email address.",
           "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role in the application.",
+          "enum": ["user", "admin"]
         }
       },
       "required": [

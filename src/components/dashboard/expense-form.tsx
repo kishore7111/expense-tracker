@@ -227,14 +227,14 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                         <Edit className="h-4 w-4" />
                         </Button>
                     ) : (
-                        <div>
-                        <Button className="hidden md:inline-flex">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Expense
-                        </Button>
-                        <Button size="icon" className="md:hidden">
-                            <PlusCircle />
-                            <span className="sr-only">Add Expense</span>
-                        </Button>
+                        <div className='flex items-center justify-center'>
+                            <Button className="hidden md:inline-flex">
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Expense
+                            </Button>
+                            <Button size="icon" className="md:hidden">
+                                <PlusCircle />
+                                <span className="sr-only">Add Expense</span>
+                            </Button>
                         </div>
                     )}
                     </SheetTrigger>
