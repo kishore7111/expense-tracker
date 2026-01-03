@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { getCategoryIcon } from '@/lib/icons';
 import ExpenseForm from '@/components/dashboard/expense-form';
-import { ReceiptText, Search } from 'lucide-react';
+import { ReceiptText, Search, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getYear, getMonth, format } from 'date-fns';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function ExpensesPage() {
   const { user, isUserLoading: authLoading } = useUser();
@@ -32,6 +35,9 @@ export default function ExpensesPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | 'all'>('all');
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -46,14 +52,24 @@ export default function ExpensesPage() {
 
   const { data: expenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery);
   
+  useEffect(() => {
+    if (expenses) {
+      const years = new Set(expenses.map(e => getYear(e.date.toDate())));
+      setAvailableYears(Array.from(years).sort((a, b) => b - a));
+    }
+  }, [expenses]);
+  
   const filteredExpenses = useMemo(() => {
     if (!expenses) return [];
     return expenses.filter(expense => {
+      const expenseDate = expense.date.toDate();
       const matchesSearch = expense.title.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || expense.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+      const matchesMonth = getMonth(expenseDate) === selectedMonth;
+      const matchesYear = getYear(expenseDate) === selectedYear;
+      return matchesSearch && matchesCategory && matchesMonth && matchesYear;
     });
-  }, [expenses, searchTerm, selectedCategory]);
+  }, [expenses, searchTerm, selectedCategory, selectedMonth, selectedYear]);
 
 
   const formatCurrency = (amount: number) => {
@@ -69,6 +85,36 @@ export default function ExpensesPage() {
       month: 'long',
       day: 'numeric',
     });
+  };
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June', 
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const handleDownloadPdf = () => {
+    const doc = new jsPDF();
+    const monthName = months[selectedMonth];
+    doc.setFontSize(18);
+    doc.text(`Expenses for ${monthName} ${selectedYear}`, 14, 22);
+
+    const total = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+    autoTable(doc, {
+      startY: 30,
+      head: [['Date', 'Title', 'Category', 'Amount']],
+      body: filteredExpenses.map(expense => [
+        formatDate(expense.date),
+        expense.title,
+        expense.category,
+        formatCurrency(expense.amount)
+      ]),
+      foot: [['Total', '', '', formatCurrency(total)]],
+      headStyles: { fillColor: [22, 163, 74] }, // Primary color
+      footStyles: { fillColor: [210, 214, 218] }, // Muted color
+    });
+
+    doc.save(`expenses-${selectedYear}-${selectedMonth + 1}.pdf`);
   };
 
   if (authLoading || expensesLoading || !user) {
@@ -104,7 +150,7 @@ export default function ExpensesPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <div className="relative w-full sm:max-w-xs">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -131,6 +177,39 @@ export default function ExpensesPage() {
                   ))}
                 </SelectContent>
               </Select>
+               <Select
+                value={String(selectedMonth)}
+                onValueChange={(value) => setSelectedMonth(Number(value))}
+              >
+                <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectValue placeholder="Select Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month, index) => (
+                    <SelectItem key={index} value={String(index)}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={String(selectedYear)}
+                onValueChange={(value) => setSelectedYear(Number(value))}
+              >
+                <SelectTrigger className="w-full sm:w-[120px]">
+                  <SelectValue placeholder="Select Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map((year) => (
+                    <SelectItem key={year} value={String(year)}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleDownloadPdf} disabled={filteredExpenses.length === 0}>
+                <FileDown className="mr-2 h-4 w-4" /> Download PDF
+              </Button>
             </div>
             <Table>
               <TableHeader>
@@ -163,7 +242,7 @@ export default function ExpensesPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      No expenses found.
+                      No expenses found for the selected period.
                     </TableCell>
                   </TableRow>
                 )}
