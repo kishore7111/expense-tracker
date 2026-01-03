@@ -55,6 +55,10 @@ export default function ExpensesPage() {
   useEffect(() => {
     if (expenses) {
       const years = new Set(expenses.map(e => getYear(e.date.toDate())));
+      const currentYear = new Date().getFullYear();
+      if (!years.has(currentYear)) {
+        years.add(currentYear);
+      }
       setAvailableYears(Array.from(years).sort((a, b) => b - a));
     }
   }, [expenses]);
