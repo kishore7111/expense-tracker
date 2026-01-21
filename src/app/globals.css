@@ -10,8 +10,8 @@
     --card-foreground: 224 71.4% 4.1%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 71.4% 4.1%;
-    --primary: 142.1 76.2% 36.3%; /* Emerald Green */
-    --primary-foreground: 355.7 100% 97.3%;
+    --primary: 217.2 91.2% 59.8%; /* Sapphire Blue */
+    --primary-foreground: 210 40% 98%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
     --muted: 240 4.8% 95.9%;
@@ -22,13 +22,13 @@
     --destructive-foreground: 0 0% 98%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 142.1 76.2% 36.3%;
+    --ring: 217.2 91.2% 59.8%;
     --radius: 0.5rem;
-    --chart-1: 142.1 76.2% 36.3%;
-    --chart-2: 152.1 66.2% 40.3%;
-    --chart-3: 162.1 56.2% 44.3%;
-    --chart-4: 172.1 46.2% 48.3%;
-    --chart-5: 182.1 36.2% 52.3%;
+    --chart-1: 217.2 91.2% 59.8%;
+    --chart-2: 217.2 81.2% 69.8%;
+    --chart-3: 217.2 71.2% 79.8%;
+    --chart-4: 217.2 61.2% 89.8%;
+    --chart-5: 217.2 51.2% 99.8%;
   }
 
   .dark {
@@ -38,8 +38,8 @@
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 142.1 70.2% 46.3%; /* Brighter Green for Dark Mode */
-    --primary-foreground: 144.9 80.4% 10%;
+    --primary: 217.2 91.2% 59.8%; /* Sapphire Blue */
+    --primary-foreground: 210 40% 98%;
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
     --muted: 240 3.7% 15.9%;
@@ -50,12 +50,12 @@
     --destructive-foreground: 0 0% 98%;
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
-    --ring: 142.1 70.2% 46.3%;
-    --chart-1: 142.1 70.2% 46.3%;
-    --chart-2: 152.1 60.2% 50.3%;
-    --chart-3: 162.1 50.2% 54.3%;
-    --chart-4: 172.1 40.2% 58.3%;
-    --chart-5: 182.1 30.2% 62.3%;
+    --ring: 217.2 91.2% 59.8%;
+    --chart-1: 217.2 91.2% 59.8%;
+    --chart-2: 217.2 81.2% 69.8%;
+    --chart-3: 217.2 71.2% 79.8%;
+    --chart-4: 217.2 61.2% 89.8%;
+    --chart-5: 217.2 51.2% 99.8%;
   }
 }
 

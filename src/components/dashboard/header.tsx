@@ -42,7 +42,7 @@ export default function Header({ user, onGenerateSummary }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-card/80 backdrop-blur-sm">
+    <header className="sticky top-0 z-40 w-full border-b bg-card">
       <div className="container flex h-16 items-center space-x-2 px-4 sm:justify-between sm:space-x-0 md:px-6">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 text-xl font-bold text-primary md:text-2xl">
