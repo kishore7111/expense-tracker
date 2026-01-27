@@ -1,6 +1,6 @@
-# SpendWise - Expense Tracker
+# PocketGuard - Expense Tracker
 
-SpendWise is a modern, AI-powered expense tracking web application built with Next.js, Firebase, and Google's Genkit. It allows users to manage their finances with ease, offering features like automatic expense categorization and insightful financial summaries.
+PocketGuard is a modern, AI-powered expense tracking web application built with Next.js, Firebase, and Google's Genkit. It allows users to manage their finances with ease, offering features like automatic expense categorization and insightful financial summaries.
 
 ## Features
 

@@ -65,7 +65,7 @@ export default function LoginPage() {
           <div className="flex justify-center mb-4">
              <Link href="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
                 <Wallet className="h-8 w-8" />
-                <span>SpendWise</span>
+                <span>PocketGuard</span>
             </Link>
           </div>
           <CardTitle className="text-2xl">Welcome Back!</CardTitle>

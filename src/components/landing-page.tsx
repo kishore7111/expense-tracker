@@ -16,7 +16,7 @@ const features = [
   {
     icon: <BrainCircuit />,
     title: 'AI-Powered Categorization',
-    description: 'Forget manual sorting. SpendWise automatically categorizes your expenses, saving you time and effort.',
+    description: 'Forget manual sorting. PocketGuard automatically categorizes your expenses, saving you time and effort.',
   },
   {
     icon: <BarChart />,
@@ -41,7 +41,7 @@ export default function LandingPage() {
         <div className="container flex h-16 items-center justify-between px-4 md:px-6">
           <Link href="/" className="flex items-center gap-2 text-xl font-bold text-primary md:text-2xl">
             <Wallet className="h-7 w-7" />
-            <span className="font-headline">SpendWise</span>
+            <span className="font-headline">PocketGuard</span>
           </Link>
           <nav className="hidden items-center gap-4 md:flex">
             <Link href="#features" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
@@ -70,7 +70,7 @@ export default function LandingPage() {
                 <div className="space-y-4">
                   <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
                     Take Control of Your Finances with{' '}
-                    <span className="text-primary">SpendWise</span>
+                    <span className="text-primary">PocketGuard</span>
                   </h1>
                   <p className="max-w-[600px] text-muted-foreground md:text-xl mx-auto lg:mx-0">
                     The smart, simple, and secure way to track your expenses. Let our AI-powered app do the heavy lifting so you can focus on what matters.
@@ -104,7 +104,7 @@ export default function LandingPage() {
                 <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm text-primary">Key Features</div>
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Everything You Need to Manage Your Money</h2>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  SpendWise is packed with features designed to make financial management easy and intuitive.
+                  PocketGuard is packed with features designed to make financial management easy and intuitive.
                 </p>
               </div>
             </div>
@@ -205,10 +205,10 @@ export default function LandingPage() {
       </main>
       <footer className="bg-muted p-6 md:py-8 w-full">
         <div className="container flex items-center justify-between text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} SpendWise. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} PocketGuard. All rights reserved.</p>
           <Link href="/" className="flex items-center gap-2 text-lg font-bold text-primary">
             <Wallet className="h-6 w-6" />
-            <span className="font-headline">SpendWise</span>
+            <span className="font-headline">PocketGuard</span>
           </Link>
         </div>
       </footer>

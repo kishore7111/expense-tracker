@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { User as FirebaseUser } from 'firebase/auth';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { PiggyBank, ReceiptText } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Expense } from '@/lib/types';
@@ -36,7 +36,8 @@ export default function UserDashboard({ user }: UserDashboardProps) {
     if (!user) return null;
     return query(
       collection(firestore, 'users', user.uid, 'expenses'),
-      orderBy('date', 'desc')
+      orderBy('date', 'desc'),
+      limit(100)
     );
   }, [firestore, user]);
 
@@ -85,7 +86,7 @@ export default function UserDashboard({ user }: UserDashboardProps) {
         ) : !expenses || expenses.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-16 px-4">
             <PiggyBank className="w-16 h-16 mb-4 text-primary" />
-            <h2 className="text-2xl font-bold mb-2">Welcome to SpendWise!</h2>
+            <h2 className="text-2xl font-bold mb-2">Welcome to PocketGuard!</h2>
             <p className="text-muted-foreground">You haven&apos;t added any expenses yet. Click the &quot;Add Expense&quot; button to get started.</p>
           </div>
         ) : (

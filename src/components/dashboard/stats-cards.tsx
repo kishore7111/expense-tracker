@@ -48,7 +48,7 @@ export default function StatsCards({ expenses }: StatsCardsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(totalExpenses)}</div>
-          <p className="text-xs text-muted-foreground">All-time spending</p>
+          <p className="text-xs text-muted-foreground">Based on recent activity</p>
         </CardContent>
       </Card>
       <Card>
