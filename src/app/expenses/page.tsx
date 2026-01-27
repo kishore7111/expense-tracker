@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, where, Timestamp } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import type { Expense, ExpenseCategory } from '@/lib/types';
 import { expenseCategories } from '@/lib/types';
@@ -45,36 +45,53 @@ export default function ExpensesPage() {
       router.push('/login');
     }
   }, [user, authLoading, router]);
-
+  
   const expensesQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(collection(firestore, 'users', user.uid, 'expenses'), orderBy('date', 'desc'));
-  }, [firestore, user]);
+    if (!user || !firestore) return null;
+
+    // Calculate the start and end of the selected month
+    const startDate = new Date(selectedYear, selectedMonth, 1);
+    const endDate = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
+
+    // Base collection reference
+    const collectionRef = collection(firestore, 'users', user.uid, 'expenses');
+    
+    // Dynamically build constraints
+    const constraints = [
+      where('date', '>=', Timestamp.fromDate(startDate)),
+      where('date', '<=', Timestamp.fromDate(endDate)),
+    ];
+
+    if (selectedCategory !== 'all') {
+      constraints.push(where('category', '==', selectedCategory));
+    }
+    
+    // Add ordering. Note: If you filter by category, you may need a composite index in Firestore.
+    // The query will be something like query(collectionRef, where(...), where(...), orderBy(...))
+    // This example adds orderBy at the end, which is typical.
+    return query(collectionRef, ...constraints, orderBy('date', 'desc'));
+
+  }, [firestore, user, selectedYear, selectedMonth, selectedCategory]);
+
 
   const { data: expenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery);
   
   useEffect(() => {
-    if (expenses) {
-      const years = new Set(expenses.map(e => getYear(e.date.toDate())));
-      const currentYear = new Date().getFullYear();
-      if (!years.has(currentYear)) {
-        years.add(currentYear);
-      }
-      setAvailableYears(Array.from(years).sort((a, b) => b - a));
-    }
-  }, [expenses]);
+    // To avoid fetching all expenses just to get the years (which caused the performance issue),
+    // we'll provide a sensible range of recent years for filtering.
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
+    setAvailableYears(years);
+  }, []);
   
   const filteredExpenses = useMemo(() => {
     if (!expenses) return [];
-    return expenses.filter(expense => {
-      const expenseDate = expense.date.toDate();
-      const matchesSearch = expense.title.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || expense.category === selectedCategory;
-      const matchesMonth = getMonth(expenseDate) === selectedMonth;
-      const matchesYear = getYear(expenseDate) === selectedYear;
-      return matchesSearch && matchesCategory && matchesMonth && matchesYear;
-    });
-  }, [expenses, searchTerm, selectedCategory, selectedMonth, selectedYear]);
+    if (!searchTerm) return expenses; // Return all if search is empty, as data is pre-filtered by server
+
+    return expenses.filter(expense => 
+      expense.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [expenses, searchTerm]);
 
 
   const formatCurrency = (amount: number) => {
@@ -167,7 +184,7 @@ export default function ExpensesPage() {
     XLSX.writeFile(workbook, `expenses-${selectedYear}-${selectedMonth + 1}.xlsx`);
   };
 
-  if (authLoading || expensesLoading || !user) {
+  if (authLoading || !user) {
     return (
       <div className="flex flex-col min-h-screen">
         <Header user={null} onGenerateSummary={() => {}} />
@@ -258,51 +275,57 @@ export default function ExpensesPage() {
                 </SelectContent>
               </Select>
               <div className="flex gap-2">
-                <Button onClick={handleDownloadPdf} disabled={filteredExpenses.length === 0}>
+                <Button onClick={handleDownloadPdf} disabled={!filteredExpenses || filteredExpenses.length === 0}>
                     <FileDown className="mr-2 h-4 w-4" /> PDF
                 </Button>
-                <Button onClick={handleDownloadXlsx} disabled={filteredExpenses.length === 0} variant="outline">
+                <Button onClick={handleDownloadXlsx} disabled={!filteredExpenses || filteredExpenses.length === 0} variant="outline">
                     <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel
                 </Button>
               </div>
             </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredExpenses && filteredExpenses.length > 0 ? (
-                  filteredExpenses.map((expense) => (
-                    <TableRow key={expense.id}>
-                      <TableCell className="font-medium">{expense.title}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                          {getCategoryIcon(expense.category)}
-                          {expense.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatDate(expense.date)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(expense.amount)}</TableCell>
-                      <TableCell className="text-right">
-                        <ExpenseForm expense={expense} />
+            {expensesLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <Skeleton className="h-48 w-full" />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredExpenses && filteredExpenses.length > 0 ? (
+                    filteredExpenses.map((expense) => (
+                      <TableRow key={expense.id}>
+                        <TableCell className="font-medium">{expense.title}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                            {getCategoryIcon(expense.category)}
+                            {expense.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatDate(expense.date)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(expense.amount)}</TableCell>
+                        <TableCell className="text-right">
+                          <ExpenseForm expense={expense} />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        No expenses found for the selected period.
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      No expenses found for the selected period.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </main>
