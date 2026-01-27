@@ -1,3 +1,4 @@
+
 'use client';
     
 import {
@@ -13,77 +14,70 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import {FirestorePermissionError} from '@/firebase/errors';
 
 /**
- * Initiates a setDoc operation for a document reference.
- * Does NOT await the write operation internally.
+ * Performs a setDoc operation and throws a contextual error on failure.
  */
-export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
-  setDoc(docRef, data, options).catch(error => {
-    errorEmitter.emit(
-      'permission-error',
-      new FirestorePermissionError({
-        path: docRef.path,
-        operation: 'write', // or 'create'/'update' based on options
-        requestResourceData: data,
-      })
-    )
-  })
-  // Execution continues immediately
+export async function setDocument(docRef: DocumentReference, data: any, options: SetOptions) {
+  try {
+    await setDoc(docRef, data, options);
+  } catch (error) {
+    const permissionError = new FirestorePermissionError({
+      path: docRef.path,
+      operation: options.merge ? 'update' : 'create',
+      requestResourceData: data,
+    });
+    errorEmitter.emit('permission-error', permissionError);
+    throw permissionError;
+  }
+}
+
+/**
+ * Performs an addDoc operation and throws a contextual error on failure.
+ */
+export async function addDocument(colRef: CollectionReference, data: any) {
+  try {
+    return await addDoc(colRef, data);
+  } catch (error) {
+    const permissionError = new FirestorePermissionError({
+      path: colRef.path,
+      operation: 'create',
+      requestResourceData: data,
+    });
+    errorEmitter.emit('permission-error', permissionError);
+    throw permissionError;
+  }
 }
 
 
 /**
- * Initiates an addDoc operation for a collection reference.
- * Does NOT await the write operation internally.
- * Returns the Promise for the new doc ref, but typically not awaited by caller.
+ * Performs an updateDoc operation and throws a contextual error on failure.
  */
-export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
-  const promise = addDoc(colRef, data)
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: colRef.path,
-          operation: 'create',
-          requestResourceData: data,
-        })
-      )
+export async function updateDocument(docRef: DocumentReference, data: any) {
+  try {
+    await updateDoc(docRef, data);
+  } catch (error) {
+    const permissionError = new FirestorePermissionError({
+      path: docRef.path,
+      operation: 'update',
+      requestResourceData: data,
     });
-  return promise;
+    errorEmitter.emit('permission-error', permissionError);
+    throw permissionError;
+  }
 }
 
 
 /**
- * Initiates an updateDoc operation for a document reference.
- * Does NOT await the write operation internally.
+ * Performs a deleteDoc operation and throws a contextual error on failure.
  */
-export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
-  updateDoc(docRef, data)
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'update',
-          requestResourceData: data,
-        })
-      )
+export async function deleteDocument(docRef: DocumentReference) {
+  try {
+    await deleteDoc(docRef);
+  } catch (error) {
+    const permissionError = new FirestorePermissionError({
+      path: docRef.path,
+      operation: 'delete',
     });
-}
-
-
-/**
- * Initiates a deleteDoc operation for a document reference.
- * Does NOT await the write operation internally.
- */
-export function deleteDocumentNonBlocking(docRef: DocumentReference) {
-  deleteDoc(docRef)
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'delete',
-        })
-      )
-    });
+    errorEmitter.emit('permission-error', permissionError);
+    throw permissionError;
+  }
 }

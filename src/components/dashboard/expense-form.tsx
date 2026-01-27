@@ -55,9 +55,9 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  addDocumentNonBlocking,
-  deleteDocumentNonBlocking,
-  updateDocumentNonBlocking,
+  addDocument,
+  deleteDocument,
+  updateDocument,
 } from '@/firebase/non-blocking-updates';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -96,7 +96,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
     return query(collection(firestore, 'users', userId, 'expenses'), orderBy('date', 'desc'));
   }, [firestore, userId]);
   
-  const { data: userExpenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery);
+  const { data: userExpenses } = useCollection<Expense>(expensesQuery);
 
   const [dynamicCategories, setDynamicCategories] = useState<string[]>([]);
 
@@ -147,34 +147,34 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
 
     setIsSubmitting(true);
 
-    let category = values.category;
-    if (!category || category === '') {
-      category = await getAICategory(values.title, values.description);
-    }
-
-    const expenseData = {
-      ...values,
-      userId: userId,
-      category,
-      date: Timestamp.fromDate(values.date),
-      timestamp: new Date().getTime(),
-    };
-
     try {
+      let category = values.category;
+      if (!category || category === '') {
+        category = await getAICategory(values.title, values.description);
+      }
+
+      const expenseData = {
+        ...values,
+        userId: userId,
+        category,
+        date: Timestamp.fromDate(values.date),
+        timestamp: new Date().getTime(),
+      };
+
       if (expense) {
         const docRef = doc(firestore, 'users', userId, 'expenses', expense.id);
-        updateDocumentNonBlocking(docRef, expenseData);
+        await updateDocument(docRef, expenseData);
         toast({ title: 'Success', description: 'Expense updated successfully.' });
       } else {
         const collectionRef = collection(firestore, 'users', userId, 'expenses');
-        addDocumentNonBlocking(collectionRef, expenseData);
+        await addDocument(collectionRef, expenseData);
         toast({ title: 'Success', description: 'Expense added successfully.' });
       }
       
       await revalidateDashboard();
       setIsSheetOpen(false);
     } catch (error: any) {
-      console.error(error);
+      console.error("Failed to save expense:", error);
       toast({ variant: 'destructive', title: 'Error', description: error.message || 'Something went wrong.' });
     } finally {
       setIsSubmitting(false);
@@ -186,12 +186,19 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
       toast({ variant: 'destructive', title: 'Error', description: 'Could not delete expense.' });
       return;
     }
-    const docRef = doc(firestore, 'users', userId, 'expenses', expense.id);
-    deleteDocumentNonBlocking(docRef);
-    await revalidateDashboard();
-    toast({ title: 'Success', description: 'Expense deleted.' });
-    setIsDeleteDialogOpen(false);
-    setIsSheetOpen(false);
+    setIsSubmitting(true);
+    try {
+        const docRef = doc(firestore, 'users', userId, 'expenses', expense.id);
+        await deleteDocument(docRef);
+        toast({ title: 'Success', description: 'Expense deleted.' });
+        await revalidateDashboard();
+        setIsDeleteDialogOpen(false);
+        setIsSheetOpen(false);
+    } catch(error: any) {
+        toast({ variant: 'destructive', title: 'Error', description: error.message || 'Could not delete expense.' });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   const onSheetOpenChange = (open: boolean) => {
@@ -347,7 +354,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-50" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
@@ -365,7 +372,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                 {expense && (
                   <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                     <AlertDialogTrigger asChild>
-                      <Button type="button" variant="destructive" className="mr-auto">
+                      <Button type="button" variant="destructive" className="mr-auto" disabled={isSubmitting}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
                       </Button>
@@ -379,7 +386,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                        <AlertDialogAction onClick={handleDelete} disabled={isSubmitting}>Delete</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -389,7 +396,7 @@ export default function ExpenseForm({ expense, userId: adminUserId }: ExpenseFor
                     Cancel
                   </Button>
                 </SheetClose>
-                <Button type="submit" disabled={isSubmitting || expensesLoading}>
+                <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? 'Saving...' : 'Save Expense'}
                 </Button>
               </SheetFooter>
