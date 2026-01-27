@@ -86,7 +86,7 @@ export default function UserDashboard({ user }: UserDashboardProps) {
         ) : !expenses || expenses.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-16 px-4">
             <PiggyBank className="w-16 h-16 mb-4 text-primary" />
-            <h2 className="text-2xl font-bold mb-2">Welcome to PocketGuard!</h2>
+            <h2 className="text-2xl font-bold mb-2">Welcome to Expense Tracker!</h2>
             <p className="text-muted-foreground">You haven&apos;t added any expenses yet. Click the &quot;Add Expense&quot; button to get started.</p>
           </div>
         ) : (

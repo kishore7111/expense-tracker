@@ -1,6 +1,6 @@
-# PocketGuard - Expense Tracker
+# Expense Tracker
 
-PocketGuard is a modern, AI-powered expense tracking web application built with Next.js, Firebase, and Google's Genkit. It allows users to manage their finances with ease, offering features like automatic expense categorization and insightful financial summaries.
+Expense Tracker is a modern, AI-powered expense tracking web application built with Next.js, Firebase, and Google's Genkit. It allows users to manage their finances with ease, offering features like automatic expense categorization and insightful financial summaries.
 
 ## Features
 

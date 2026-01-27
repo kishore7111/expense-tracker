@@ -67,7 +67,7 @@ export default function SignupPage() {
            <div className="flex justify-center mb-4">
              <Link href="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
                 <Wallet className="h-8 w-8" />
-                <span>PocketGuard</span>
+                <span>Expense Tracker</span>
             </Link>
           </div>
           <CardTitle className="text-2xl">Create an Account</CardTitle>

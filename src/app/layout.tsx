@@ -5,7 +5,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
-  title: 'PocketGuard',
+  title: 'Expense Tracker',
   description: 'Track your expenses with ease.',
 };
 

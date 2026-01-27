@@ -4,7 +4,7 @@
     "User": {
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the PocketGuard application.",
+      "description": "Represents a user of the Expense Tracker application.",
       "properties": {
         "email": {
           "type": "string",
