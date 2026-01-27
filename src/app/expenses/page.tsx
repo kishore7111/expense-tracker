@@ -181,7 +181,7 @@ export default function ExpensesPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen">
       <Header user={user} onGenerateSummary={() => {}} />
       <main className="flex-1 p-4 md:p-6 lg:p-8">
         <Card>
