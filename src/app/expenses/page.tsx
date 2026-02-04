@@ -24,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getYear, getMonth, format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -36,8 +35,8 @@ export default function ExpensesPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | 'all'>('all');
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   useEffect(() => {
@@ -45,9 +44,17 @@ export default function ExpensesPage() {
       router.push('/login');
     }
   }, [user, authLoading, router]);
+
+  // Set initial date on client to avoid hydration mismatch
+  useEffect(() => {
+    const now = new Date();
+    setSelectedMonth(now.getMonth());
+    setSelectedYear(now.getFullYear());
+  }, []);
   
   const expensesQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
+    // Wait for user, firestore, and client-side date initialization
+    if (!user || !firestore || selectedYear === null || selectedMonth === null) return null;
 
     // Calculate the start and end of the selected month
     const startDate = new Date(selectedYear, selectedMonth, 1);
@@ -67,8 +74,6 @@ export default function ExpensesPage() {
     }
     
     // Add ordering. Note: If you filter by category, you may need a composite index in Firestore.
-    // The query will be something like query(collectionRef, where(...), where(...), orderBy(...))
-    // This example adds orderBy at the end, which is typical.
     return query(collectionRef, ...constraints, orderBy('date', 'desc'));
 
   }, [firestore, user, selectedYear, selectedMonth, selectedCategory]);
@@ -77,8 +82,7 @@ export default function ExpensesPage() {
   const { data: expenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery);
   
   useEffect(() => {
-    // To avoid fetching all expenses just to get the years (which caused the performance issue),
-    // we'll provide a sensible range of recent years for filtering.
+    // Provide a sensible range of recent years for filtering.
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
     setAvailableYears(years);
@@ -86,7 +90,7 @@ export default function ExpensesPage() {
   
   const filteredExpenses = useMemo(() => {
     if (!expenses) return [];
-    if (!searchTerm) return expenses; // Return all if search is empty, as data is pre-filtered by server
+    if (!searchTerm) return expenses;
 
     return expenses.filter(expense => 
       expense.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -119,6 +123,7 @@ export default function ExpensesPage() {
   ];
 
   const handleDownloadPdf = () => {
+    if (selectedMonth === null || selectedYear === null) return;
     const doc = new jsPDF();
     const monthName = months[selectedMonth];
     doc.setFontSize(18);
@@ -144,7 +149,7 @@ export default function ExpensesPage() {
   };
 
   const handleDownloadXlsx = () => {
-    const monthName = months[selectedMonth];
+    if (selectedMonth === null || selectedYear === null) return;
     const total = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
     
     const dataToExport = filteredExpenses.map(expense => ({
@@ -184,10 +189,10 @@ export default function ExpensesPage() {
     XLSX.writeFile(workbook, `expenses-${selectedYear}-${selectedMonth + 1}.xlsx`);
   };
 
-  if (authLoading || !user) {
+  if (authLoading || !user || selectedYear === null || selectedMonth === null) {
     return (
       <div className="flex flex-col min-h-screen">
-        <Header user={null} onGenerateSummary={() => {}} />
+        <Header user={user} onGenerateSummary={() => {}} />
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="grid gap-6">
             <Skeleton className="h-96" />
